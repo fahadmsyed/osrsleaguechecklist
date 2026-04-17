@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSRS Leagues 5 - Task Checklist</title>
+<style>
+  :root {
+    --gold: #c8a84b;
+    --gold-light: #f0d060;
+    --dark: #1a1209;
+    --dark2: #241a0a;
+    --dark3: #2e2010;
+    --panel: #1e1608;
+    --border: #5a4010;
+    --border-light: #8a6820;
+    --text: #e8d8a0;
+    --text-dim: #a89060;
+    --green: #4a8c3f;
+    --green-light: #6abf5e;
+    --red: #8c3f3f;
+    --blue: #3f6a8c;
+    --blue-light: #5fa0c8;
+    --purple: #7a4a9c;
+    --section-colors: #c8a84b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(200,168,75,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(200,168,75,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .layout {
+    display: flex;
+    gap: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 16px;
+    height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 6px; }
+  .sidebar::-webkit-scrollbar-track { background: var(--dark2); }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .inv-panel {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .inv-panel-header {
+    background: linear-gradient(135deg, var(--dark3), var(--dark2));
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .inv-panel-header h3 {
+    color: var(--gold);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .inv-icon { font-size: 16px; }
+
+  .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    padding: 8px;
+    min-height: 60px;
+  }
+
+  .inv-slot {
+    background: var(--dark3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    cursor: default;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .inv-slot:hover { border-color: var(--gold); }
+
+  .inv-slot .item-icon { font-size: 18px; line-height: 1; }
+  .inv-slot .item-name {
+    font-size: 8px;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 1.1;
+    margin-top: 2px;
+  }
+  .inv-slot .item-qty {
+    position: absolute;
+    top: 1px;
+    right: 2px;
+    font-size: 8px;
+    color: var(--gold);
+    font-weight: bold;
+  }
+
+  .inv-slot.equipped {
+    border-color: var(--blue);
+    background: rgba(63, 106, 140, 0.15);
+  }
+
+  .inv-location {
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    font-style: italic;
+  }
+
+  /* Progress panel */
+  .progress-panel {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+  }
+
+  .progress-panel h3 {
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+
+  .progress-bar-wrap {
+    background: var(--dark3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    height: 14px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--green-light));
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    min-width: 0;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .reset-btn {
+    width: 100%;
+    padding: 6px;
+    background: var(--red);
+    border: 1px solid #c05050;
+    color: #ffd0d0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: background 0.2s;
+    margin-top: 6px;
+  }
+  .reset-btn:hover { background: #a04040; }
+
+  /* Nav panel */
+  .nav-panel {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .nav-panel-header {
+    background: linear-gradient(135deg, var(--dark3), var(--dark2));
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .nav-list { padding: 6px 0; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-decoration: none;
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+  .nav-item:hover { background: var(--dark3); color: var(--text); }
+
+  .nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .nav-item.done .nav-dot { background: var(--green-light); }
+  .nav-item.partial .nav-dot { background: var(--gold); }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .page-header {
+    background: linear-gradient(135deg, var(--dark3), var(--dark2));
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    text-align: center;
+  }
+
+  .page-header h1 {
+    color: var(--gold-light);
+    font-size: 26px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 8px rgba(200,168,75,0.4);
+  }
+
+  .page-header p {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, var(--dark3), var(--dark2));
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+  }
+
+  .section-header:hover { background: linear-gradient(135deg, #382810, #2e2010); }
+
+  .section-icon { font-size: 20px; flex-shrink: 0; }
+
+  .section-title {
+    flex: 1;
+  }
+
+  .section-title h2 {
+    color: var(--gold);
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .section-title .section-sub {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-top: 1px;
+  }
+
+  .section-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .section-count {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+
+  .section-mini-bar {
+    width: 80px;
+    height: 6px;
+    background: var(--dark3);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .section-mini-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--green-light));
+    border-radius: 3px;
+    transition: width 0.4s;
+  }
+
+  .section-chevron {
+    color: var(--text-dim);
+    font-size: 12px;
+    transition: transform 0.2s;
+    margin-left: 4px;
+  }
+
+  .section.collapsed .section-chevron { transform: rotate(-90deg); }
+  .section.collapsed .section-body { display: none; }
+
+  .section-body { padding: 8px 0; }
+
+  /* ── TASKS ── */
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 16px;
+    border-bottom: 1px solid rgba(90,64,16,0.3);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+
+  .task-item:last-child { border-bottom: none; }
+  .task-item:hover { background: rgba(255,255,255,0.03); }
+  .task-item.done { background: rgba(74,140,63,0.06); }
+  .task-item.done:hover { background: rgba(74,140,63,0.1); }
+
+  .task-cb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-light);
+    border-radius: 3px;
+    background: var(--dark3);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+    position: relative;
+    transition: all 0.15s;
+  }
+
+  .task-cb:checked {
+    background: var(--green);
+    border-color: var(--green-light);
+  }
+
+  .task-cb:checked::after {
+    content: '✓';
+    position: absolute;
+    top: -2px;
+    left: 1px;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .task-text {
+    flex: 1;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    transition: color 0.15s;
+  }
+
+  .task-item.done .task-text {
+    color: var(--text-dim);
+    text-decoration: line-through;
+    text-decoration-color: rgba(168,144,96,0.5);
+  }
+
+  .task-num {
+    color: var(--border-light);
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 24px;
+    text-align: right;
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+
+  /* Tags */
+  .tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .tag-warn { background: rgba(200,100,40,0.3); color: #f0a070; border: 1px solid rgba(200,100,40,0.5); }
+  .tag-opt { background: rgba(120,80,160,0.3); color: #c0a0e0; border: 1px solid rgba(120,80,160,0.5); }
+  .tag-bank { background: rgba(63,106,140,0.3); color: #90c8e8; border: 1px solid rgba(63,106,140,0.5); }
+  .tag-tele { background: rgba(140,63,140,0.3); color: #e090e0; border: 1px solid rgba(140,63,140,0.5); }
+
+  /* Inventory inline card */
+  .inv-card {
+    margin: 4px 16px 8px;
+    background: rgba(30,22,8,0.8);
+    border: 1px solid var(--blue);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .inv-card-header {
+    background: rgba(63,106,140,0.2);
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--blue-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .inv-card-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .inv-chip {
+    background: var(--dark3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .inv-chip .chip-icon { font-size: 14px; }
+  .inv-chip.equipped-chip { border-color: var(--blue); color: var(--blue-light); }
+  .inv-chip.new-chip { border-color: var(--green-light); color: var(--green-light); background: rgba(74,140,63,0.1); }
+
+  /* Note blocks */
+  .note-block {
+    margin: 4px 16px 8px;
+    background: rgba(120,90,20,0.15);
+    border-left: 3px solid var(--gold);
+    border-radius: 0 4px 4px 0;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .note-block strong { color: var(--gold); }
+
+  /* Section dividers */
+  .sub-header {
+    padding: 8px 16px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-top: 1px dashed var(--border);
+    margin-top: 4px;
+  }
+
+  .sub-header:first-child { border-top: none; margin-top: 0; }
+
+  /* Scrollbar for main */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--dark2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+  @media (max-width: 900px) {
+    .layout { flex-direction: column; }
+    .sidebar { position: static; height: auto; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <div class="progress-panel">
+      <h3>⚔ Overall Progress</h3>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="global-bar" style="width:0%"></div>
+      </div>
+      <div class="progress-label">
+        <span id="global-count">0 / 0 tasks</span>
+        <span id="global-pct">0%</span>
+      </div>
+      <button class="reset-btn" onclick="resetAll()">✕ Reset All</button>
+    </div>
+
+    <div class="inv-panel">
+      <div class="inv-panel-header">
+        <span class="inv-icon">🎒</span>
+        <h3>Current Inventory</h3>
+      </div>
+      <div class="inv-grid" id="sidebar-inv">
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+        <div class="inv-slot"><span class="item-icon">⬜</span></div>
+      </div>
+      <div class="inv-location" id="sidebar-location">📍 Starting out...</div>
+    </div>
+
+    <div class="nav-panel">
+      <div class="nav-panel-header">📋 Sections</div>
+      <div class="nav-list" id="nav-list"></div>
+    </div>
+
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <div class="page-header">
+      <h1>⚔ Leagues V — Task Checklist</h1>
+      <p>Progress saves automatically in your browser · Endless Harvest / Woodsman build</p>
+    </div>
+
+    <div id="sections-container"></div>
+
+  </main>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────
+
+const SECTIONS = [
+  {
+    id: 's1',
+    icon: '🗺️',
+    title: 'Tutorial & Early Varlamore',
+    sub: 'Tasks 1–24 · Relic, thieving, cakes, early skills',
+    tasks: [
+      { id: 1, text: 'Open the Leagues Menu' },
+      { id: 2, text: 'Complete the Leagues Tutorial' },
+      { id: 3, text: 'Claim first relic (Endless Harvest) — turn off auto-bank for now', tag: 'warn' },
+      { id: 4, text: 'Turn off Run, then back on' },
+      { id: 5, text: 'Pickpocket a Citizen (to level 5 Thieving)' },
+      { id: 6, text: 'Go inside house to the east, fill bucket at water pump' },
+      { id: 7, text: 'Run north, pet Renu' },
+      { id: 8, text: 'Bow emote near Renu' },
+      { id: 9, text: 'Travel with bird to anywhere' },
+      { id: 10, text: 'Home teleport (may put you in Yama\'s lair — leave back to Varlamore)', tag: 'tele' },
+      { id: 11, text: 'Run west, attack dummy to level 8 Attack' },
+      { id: 12, text: 'Run to Bazaar (market), cry near a child' },
+      { id: 13, text: 'Thieve full inventory of Cakes (need 14+)' },
+      { id: 14, text: 'Run northwest to General Store' },
+      { id: 15, text: 'Sell 1 cake at a time for maximum GP (not 5, 10, or 50) — need 260+ gp', tag: 'warn' },
+      { id: 16, text: 'Buy 1 knife, 1 chisel, 1 spade, 2 bird snares' },
+      { id: 17, text: 'Run south to clothing shop — buy Pink Skirt (32gp), Brown Apron (32gp), Red Cape (2gp)' },
+      { id: 18, text: 'Run straight south to southern Varlamore wall — kill rat with bow' },
+      { id: 19, text: 'Run east to altar — Salute next to Statue of Quoatlos (southern)' },
+      { id: 20, text: 'Stand next to Altar, activate Thick Skin' },
+      { id: 21, text: 'Run east, pet Xolo outside near Bird Bath' },
+      { id: 22, text: 'Drink from Bird Bath' },
+      { id: 23, text: 'Chop (or punch) 2 trees — Barbarian should reach 15+ WC here' },
+      { id: 24, text: 'Burn 1 log, fletch 1 log into arrow shafts' },
+    ]
+  },
+  {
+    id: 's2',
+    icon: '🏦',
+    title: 'Varlamore Banking & Crafting',
+    sub: 'Tasks 25–33 · Bank, glassblowing, crafting shop',
+    tasks: [
+      { id: 25, text: 'Run to east bank — deposit all, withdraw coins', tag: 'bank',
+        inv: { label: 'After banking', location: '📍 East Bank, Varlamore', items: [
+          { icon: '🪙', name: 'Coins', qty: '260+' }
+        ]}
+      },
+      { id: 26, text: 'Enter Colosseum, run north and talk to Gladiator' },
+      { id: 27, text: 'Exit, run north — talk to Port Master (Sailing)' },
+      { id: 28, text: 'Run west — buy 10 buckets of sand, 10 soda ash, glassblowing pipe' },
+      { id: 29, text: 'Run south to furnace — make 10 molten glass, deposit at bank' },
+      { id: 30, text: 'Return to charter — buy 10 more buckets of sand, 10 soda ash' },
+      { id: 31, text: 'Run to furnace — make 10 molten glass, blow all into oil lanterns (20 Crafting goal)' },
+      { id: 32, text: 'Run to bank — deposit oil lanterns; withdraw empty bucket (keep bucket), air runes, mind runes, dramen staff (equip), spade, pot', tag: 'bank',
+        inv: { label: 'Withdraw for fairy ring trip', location: '📍 East Bank, Varlamore', items: [
+          { icon: '🪣', name: 'Bucket', equipped: false },
+          { icon: '🌀', name: 'Air Runes', qty: 'some' },
+          { icon: '🧠', name: 'Mind Runes', qty: 'some' },
+          { icon: '🌿', name: 'Dramen Staff', equipped: true },
+          { icon: '🪤', name: 'Spade' },
+          { icon: '🏺', name: 'Pot' },
+        ]}
+      },
+      { id: 33, text: 'Run west to crafting shop — buy shears' },
+    ]
+  },
+  {
+    id: 's3',
+    icon: '🌾',
+    title: 'Southern Varlamore Route',
+    sub: 'Tasks 34–50 · Farming, animals, fairy ring to Zanaris',
+    tasks: [
+      { id: 34, text: 'Run south of Varlamore from the bank' },
+      { id: 35, text: 'Pick 6 cabbage (drop)' },
+      { id: 36, text: 'Kill 1 chicken — pick up bone' },
+      { id: 37, text: 'Sit emote just south of the cabbage field (near dogs)' },
+      { id: 38, text: 'Run west — pick sweetcorn (drop)' },
+      { id: 39, text: 'Give Molossus bones (north/northwest of sweetcorn)' },
+      { id: 40, text: 'Run west — pick and eat 1 onion' },
+      { id: 41, text: 'Run west — pick 6 wheat (keep 1, drop 5)' },
+      { id: 42, text: 'Make flour in the windmill to the west (can drop flour)' },
+      { id: 43, text: 'Run northwest to Ortus Farm — pick 6 potatoes (drop)' },
+      { id: 44, text: 'Buy rake from Harminia (farming patch) — rake flower patch' },
+      { id: 45, text: 'Run north — milk Dairy Buffalo' },
+      { id: 46, text: 'Run west — shear 1 alpaca' },
+      { id: 47, text: 'Run southeast to fairy ring' },
+      { id: 48, text: 'Fairy ring to Zanaris', tag: 'tele' },
+      { id: 49, text: 'Kill cow — pick up cowhide, bury bones' },
+      { id: 50, text: 'Claim Slayer task from Chaeldar' },
+    ]
+  },
+  {
+    id: 's4',
+    icon: '💎',
+    title: 'Aldarin — Vineyard & Gem Cutting',
+    sub: 'Tasks 51–61 · Fairy ring to Aldarin, money making',
+    tasks: [
+      { id: 51, text: 'Fairy ring to Aldarin (CKQ)', tag: 'tele' },
+      { id: 52, text: 'Run south — speak to Vineyard Foreman (near big wine vats), ask if he needs help' },
+      { id: 53, text: 'Search grape vineyards for 4 shimmering grape vines (use Vineyard Helper Runelite plugin)' },
+      { id: 54, text: 'Speak to Vineyard Foreman to turn in — destroy grape barrel' },
+      { id: 55, text: 'Run east to bank — deposit all', tag: 'bank' },
+      { id: 56, text: 'Withdraw coins (need 25+ GP) and chisel', tag: 'bank',
+        inv: { label: 'Gem cutting setup', location: '📍 Aldarin Bank', items: [
+          { icon: '🪙', name: 'Coins', qty: '25+' },
+          { icon: '🪨', name: 'Chisel' },
+        ]}
+      },
+      { id: 57, text: 'If you forgot chisel earlier, buy one in General Store to the north' },
+      { id: 58, text: 'Run to crafting shop (northeast of bank)' },
+      { id: 59, text: '💰 Money making: Buy uncut sapphires, cut, sell (1 at a time = 7× GP)' },
+      { id: 60, text: 'Stay as long as you want — upgrade to Emeralds then Rubies when possible. Goal ~50k gp', tag: 'opt' },
+      { id: 61, text: 'When done: buy 3 sapphires, 3 emeralds, 3 rubies for later — run east to charters' },
+    ]
+  },
+  {
+    id: 's5',
+    icon: '⚓',
+    title: 'Sunset Coast',
+    sub: 'Tasks 62–70 · Charter travel, fishing shop, seagull',
+    tasks: [
+      { id: 62, text: 'Buy 5 raw rabbit, tyras helm, bucket, tinderbox at charters' },
+      { id: 63, text: 'Cook rabbit at range southwest — eat 1 cooked. Buy more if you failed' },
+      { id: 64, text: 'Kill a seagull' },
+      { id: 65, text: 'Travel with Antonia to Sunset Coast (Don\'t charter — talk to Antonia)', tag: 'warn' },
+      { id: 66, text: 'Buy torch in General Store — light torch and drop torch/tinderbox' },
+      { id: 67, text: 'Fill bucket at sand pit (north) — drop sand' },
+      { id: 68, text: 'Run to Fishing Shop (southeast — check map)' },
+      { id: 69, text: 'Buy 1,000 feathers, big net (buy more feathers later)' },
+      { id: 70, text: 'Charter to Civitas Illa Fortis' },
+    ]
+  },
+  {
+    id: 's6',
+    icon: '🏛️',
+    title: 'Civitas Illa Fortis',
+    sub: 'Tasks 71–101 · Fishing, bar, POH, thieving, Forestry',
+    tasks: [
+      { id: 71, text: 'Buy 15 pineapples from charter — bank them' },
+      { id: 72, text: 'Run south to pond ("Park" on map)' },
+      { id: 73, text: 'Fish until casket, old boot, and house key (house key is 1/10 — can skip and return later)', tag: 'opt' },
+      { id: 74, text: 'Run northwest to bar' },
+      { id: 75, text: 'Buy 1 cup of tea, 1 Moon-lite, 1 stew, 1 jug of wine' },
+      { id: 76, text: 'Drink Moon-lite, drink jug of wine' },
+      { id: 77, text: 'Run southwest — buy POH' },
+      { id: 78, text: 'Run southeast to mace shop — buy steel mace' },
+      { id: 79, text: 'Run to Civitas Bazaar — thieve from citizen 10 times without failing' },
+      { id: 80, text: 'Buy 1 silk from silk trader, sell it back' },
+      { id: 81, text: 'Run west near west bank — give Oli the stew' },
+      { id: 82, text: 'Run to Quetzal (Renu) — bird to Aubernvale (top left)' },
+      { id: 83, text: 'Drink cup of tea' },
+      { id: 84, text: 'Run south to bank — deposit steel mace, big net, tyras helm, bucket', tag: 'bank' },
+      { id: 85, text: 'Withdraw axe, knife, cowhide, wool', tag: 'bank',
+        inv: { label: 'Aubernvale supplies', location: '📍 Aubernvale Bank', items: [
+          { icon: '🪓', name: 'Axe' },
+          { icon: '🔪', name: 'Knife' },
+          { icon: '🐄', name: 'Cowhide' },
+          { icon: '🧶', name: 'Wool' },
+        ]}
+      },
+      { id: 86, text: 'Run south to staff shop — buy Air staff and Fire staff (equip air staff)' },
+      { id: 87, text: 'Run west to Axe shop — buy Steel, Mithril, and Adamant axe' },
+      { id: 88, text: 'Chop dead tree near river — EH toggle auto-bank ON — stay until 45 logs banked' },
+      { id: 89, text: 'Withdraw 1 log from bank if using Endless Harvest' },
+      { id: 90, text: 'Make 1 plank at the sawmill' },
+      { id: 91, text: 'Run southwest — tan cowhide into regular leather' },
+      { id: 92, text: 'Buy needle and thread in gen store' },
+      { id: 93, text: 'Craft leather chaps' },
+      { id: 94, text: 'Admire beautiful logs just outside of gen store (east)' },
+      { id: 95, text: 'Step on Ent trail (near maple trees to the south) — wait for Ent to walk by' },
+      { id: 96, text: 'Run south to Nemus Retreat' },
+      { id: 97, text: 'Claim Forestry Kit from Forestry Shop (southwest of Nemus Retreat near water)' },
+      { id: 98, text: 'Equip Forestry Kit to enable Forestry events while WCing' },
+      { id: 99, text: 'Pick 6 flax' },
+      { id: 100, text: 'Spin 1 ball of wool, 1 bowstring' },
+    ]
+  },
+  {
+    id: 's7',
+    icon: '🌲',
+    title: 'Woodsman / EH Detour',
+    sub: 'Tasks 103–111 · Optional Fletching & WC tasks',
+    optional: true,
+    tasks: [
+      { id: 103, text: 'Fletch headless arrows until level 20 Fletching', tag: 'opt' },
+      { id: 104, text: 'Chop oak (south) until 60 oak logs banked — burn 1 oak log, fletch 1 oak shortbow, fletch 25 oak stocks, decorate oak totem (5 oaks)' },
+      { id: 105, text: 'Chop willows until 100-burn task done — toggle Woodsman burn OFF — bank 56 willows: 1 willow shortbow, 50 willow longbows (u) fletched, decorate willow totem (5 willows)' },
+      { id: 106, text: 'Finish 1,000 arrow shafts with extra oaks or willows' },
+      { id: 107, text: 'Chop 50 Maple logs (burn 25, bank 25)' },
+      { id: 108, text: 'Fletch 25 Maple longbow (u)' },
+      { id: 109, text: 'Complete Vale Totem miniquest — bring 5 oak logs, 5 willow logs, 5 maple logs' },
+      { id: 110, text: 'Deposit all — withdraw coins, axe, 2 bird snares, green cape, steel mace', tag: 'bank',
+        inv: { label: 'Ready for Tal Teklan', location: '📍 Aubernvale Bank', items: [
+          { icon: '🪙', name: 'Coins' },
+          { icon: '🪓', name: 'Axe' },
+          { icon: '🪤', name: 'Bird Snare', qty: '×2' },
+          { icon: '🟢', name: 'Green Cape' },
+          { icon: '🔨', name: 'Steel Mace' },
+        ]}
+      },
+    ]
+  },
+  {
+    id: 's8',
+    icon: '⛵',
+    title: 'Tal Teklan',
+    sub: 'Tasks 112–128 · Rowboat, rune shop, Hunter, combat',
+    tasks: [
+      { id: 111, text: 'Run south to Rowboat — take boat to Tal Teklan' },
+      { id: 112, text: 'Run north to rune shop — buy 5 of each elemental rune pack, 5 mind rune packs, 5 cosmics, 75 natures, 1 chaos pack, 1 death rune' },
+      { id: 113, text: 'Low alch anything for Magic XP' },
+      { id: 114, text: 'Run west — buy purple dye, dye cape purple' },
+      { id: 115, text: 'Run west — dance near Bards on the dock' },
+      { id: 116, text: 'Run southeast to ranged shop — buy 10 iron arrows, shortbow' },
+      { id: 117, text: 'Run to bank — deposit 5 nature runes', tag: 'bank' },
+      { id: 118, text: 'Run east out of Tal Teklan — kill frog near Doom Dungeon shortcut (shoot 6+ iron arrows)' },
+      { id: 119, text: 'Cut any regular tree' },
+      { id: 120, text: '⚠️ Can skip if not Woodsman — birds are painful non-Woodsman tasks', tag: 'warn' },
+      { id: 121, text: 'Run north across bridge, then east to Crimson Swifts — catch 8 (16 if not Woodsman)', tag: 'opt' },
+      { id: 122, text: 'Run west to bridge, cross south — run southwest to Tropical Wagtails — catch 15', tag: 'opt' },
+    ]
+  },
+  {
+    id: 's9',
+    icon: '🎣',
+    title: 'Kastori — Fishing & Combat',
+    sub: 'Tasks 129–145 · Fishing, dungeon, imp, gemstone crab',
+    tasks: [
+      { id: 123, text: 'Take rowboat near Tal Teklan to Kastori' },
+      { id: 124, text: 'Run southwest to fishing shop — buy small net, fishing rod, fly fishing rod, harpoon, lobster pot, 50 bait, fill inv with raw sardines' },
+      { id: 125, text: 'Cook sardines at range to the west (buy more sardines if you didn\'t cook 5 successfully)' },
+      { id: 126, text: 'Run southwest — fish shrimp until 10+ Fishing (EH: toggle auto-bank off until several raw shrimp in inv)' },
+      { id: 127, text: 'Bait fish for herring until 15 Fishing (catch at least 1 if already lv 15)' },
+      { id: 128, text: 'Net fish until anchovy — stay until 16 Fishing' },
+      { id: 129, text: 'Run northeast — cook shrimp' },
+      { id: 130, text: 'Run northeast to Dungeon icon — climb ladder' },
+      { id: 131, text: 'Kill imp with earth spell — pick up ashes (save them)' },
+      { id: 132, text: 'Run north to Statue of Ates — pet Caique (bird on a rock)' },
+      { id: 133, text: 'Run north — observe gemstone crab burrow. Get 20 Attack on crab (steel mace), train magic on defensive until burrow (get at least 5 Defence)' },
+      { id: 134, text: 'Take closest rowboat to Gloomthorn' },
+      { id: 135, text: 'Run east to Mons Gratia — kill icefiend (fire spells)' },
+      { id: 136, text: 'Run southeast to Quetzacalli gorge — kill 5 rabbits with mace, bury bones' },
+      { id: 137, text: 'Home teleport to Yama\'s lair — bury ashes', tag: 'tele' },
+      { id: 138, text: 'Hop 666 hoppy stones' },
+      { id: 139, text: 'Return to Civitas Illa Fortis', tag: 'tele' },
+    ]
+  },
+  {
+    id: 's10',
+    icon: '🛒',
+    title: 'Civitas & Cam Torum — Shopping',
+    sub: 'Tasks 146–170 · POH, gem crafting, rune shop, herblore supplies',
+    tasks: [
+      { id: 140, text: 'Quetzal to Aldarin — run north to bank — equip tyras helm', tag: 'tele' },
+      { id: 141, text: 'Deposit all — withdraw coins, chisel', tag: 'bank',
+        inv: { label: 'POH & crafting supplies', location: '📍 Aldarin Bank', items: [
+          { icon: '🪙', name: 'Coins' },
+          { icon: '🪨', name: 'Chisel' },
+        ]}
+      },
+      { id: 142, text: 'Run north to POH portal — enter build mode' },
+      { id: 143, text: 'Build cheapest room' },
+      { id: 144, text: 'Cut rubies at Gem shop. Goal: 70 Crafting (can leave at 60) — ~400k gp profit' },
+      { id: 145, text: 'Take boat to Sunset Coast' },
+      { id: 146, text: 'Run north to helmet shop — buy bronze full helm and adamant full helm' },
+      { id: 147, text: 'Run southeast to fishing shop — buy raw fish: 50 tuna, 100 swordfish' },
+      { id: 148, text: 'Run north to Cam Torum' },
+      { id: 149, text: 'Buy 1 vial of water pack, pestle and mortar, 1 eye of newt pack at herb shop' },
+      { id: 150, text: 'Buy steel, mith, adamant, rune pickaxe from mining shop', tag: 'warn' },
+      { id: 151, text: 'Get haircut — model after Faux (Samurai, Maroon color)' },
+      { id: 152, text: 'Trim beard (clean shaven)' },
+      { id: 153, text: 'Run to rune shop — buy 50 law runes, 500 natures, 100 death runes, extra elemental runes if needed' },
+      { id: 154, text: 'Low alch runes/junk while completing tasks for Magic XP' },
+      { id: 155, text: 'Run east to bank — deposit herblore supplies (keep offensive mage spells, keep all pickaxes)', tag: 'bank' },
+      { id: 156, text: 'Withdraw big net', tag: 'bank',
+        inv: { label: 'After equipping/banking', location: '📍 Cam Torum Bank', items: [
+          { icon: '🎣', name: 'Big Net' },
+          { icon: '🪙', name: 'Coins' },
+          { icon: '🌀', name: 'Mage Runes', qty: 'stack' },
+        ]}
+      },
+      { id: 157, text: 'Run to pub — buy 5 jugs of wine' },
+      { id: 158, text: 'League menu tele to Varlamore', tag: 'tele' },
+      { id: 159, text: 'Run west to blacksmith — buy addy platebody/legs, bronze platebody/legs, mithril spear, steel platebody, iron dagger' },
+      { id: 160, text: 'Equip: steel platebody, full bronze, iron dagger, mithril spear' },
+      { id: 161, text: 'Low alch steel platebody' },
+      { id: 162, text: 'Run south to bank — deposit addy, bronze, steel platebody, iron dagger. Withdraw 15 pineapples, bucket, chaos runes (Wind Bolt fine), big net, jugs of wine (~3). Keep mith spear equipped.', tag: 'bank',
+        inv: { label: 'Pineapple/dungeon run', location: '📍 Varlamore Bank', items: [
+          { icon: '🍍', name: 'Pineapples', qty: '×15' },
+          { icon: '🪣', name: 'Bucket' },
+          { icon: '💥', name: 'Chaos Runes' },
+          { icon: '🎣', name: 'Big Net' },
+          { icon: '🍷', name: 'Jug of Wine', qty: '×3' },
+          { icon: '⚔️', name: 'Mith Spear', equipped: true },
+        ]}
+      },
+    ]
+  },
+  {
+    id: 's11',
+    icon: '⛏️',
+    title: 'Farming, Dungeons & Smithing',
+    sub: 'Tasks 171–200 · Kills, farming, mining, big net fishing, smithing',
+    tasks: [
+      { id: 163, text: 'Run northwest to nearby dungeon icon — go downstairs — kill Guard' },
+      { id: 164, text: 'Go upstairs — run to western Civitas wall — run north to other dungeon icon' },
+      { id: 165, text: 'Go down ladder — run northwest — up ladder — kill Thief' },
+      { id: 166, text: 'Run south — milk buffalo' },
+      { id: 167, text: 'Run south — kill buffalo' },
+      { id: 168, text: 'Go into house east of allotments — churn butter' },
+      { id: 169, text: 'Pick up potato to southwest — bake in previous house — add butter' },
+      { id: 170, text: 'Put 15 pineapples in compost bin — close lid' },
+      { id: 171, text: 'Pickpocket farmer until 3 potato seeds' },
+      { id: 172, text: 'Buy rake from Harminia' },
+      { id: 173, text: 'Rake allotment patch — plant potatoes — buy 2 compost from farmer — protect potato patch' },
+      { id: 174, text: 'Run west — safespot dire wolf over plants' },
+      { id: 175, text: 'Run southwest — kill scorpion with mithril spear' },
+      { id: 176, text: 'Mine 6+ tin ore, 1+ copper ore (stay until 15 Mining)' },
+      { id: 177, text: 'Run southeast to Jaguars (east of Sunset Coast) — defeat without taking damage' },
+      { id: 178, text: 'Run southeast — kill a hill giant (Demonic Pact point)' },
+      { id: 179, text: 'Run far east to Stonecutter Outpost' },
+      { id: 180, text: 'Mine 1 clay, 50 iron, 20 silver, 2 coal, 3 gold, 50 mithril ore (extra iron to reach 55 Mining for mithril)' },
+      { id: 181, text: 'Run east to coast — big net fish for 20 mackerel, 10 cod' },
+      { id: 182, text: 'Run northwest to Oryx (northwest of hunter icon) — kill with melee (mage until last hit to speed up)' },
+      { id: 183, text: 'Run north to Civitas crafting shop — buy tiara mould, ring mould, amulet mould' },
+      { id: 184, text: 'Go upstairs — check for soft clay (1 min respawn on table). Take it or use bucket of water + clay from bank' },
+      { id: 185, text: 'Go downstairs — make anything on potter\'s wheel — fire at pottery oven' },
+      { id: 186, text: 'Withdraw 150 arrow shafts, 150 feathers — make 150 headless arrows (unless done earlier)' },
+      { id: 187, text: 'Make at the furnace: 1 bronze bar, 15 iron bars' },
+      { id: 188, text: 'Run northwest to anvil — smith 150 iron arrowtips' },
+      { id: 189, text: 'Run back to furnace — make 150 iron arrows on the way' },
+      { id: 190, text: 'Smelt 20 silver bars — make 20 silver tiaras' },
+      { id: 191, text: 'Deposit all — withdraw coins, dramen staff, jugs of wine. Buy extra wine at bar for thieving training.', tag: 'bank',
+        inv: { label: 'Thieving prep', location: '📍 Civitas Bank', items: [
+          { icon: '🪙', name: 'Coins' },
+          { icon: '🌿', name: 'Dramen Staff', equipped: true },
+          { icon: '🍷', name: 'Jug of Wine', qty: 'stack' },
+        ]}
+      },
+    ]
+  },
+  {
+    id: 's12',
+    icon: '🦋',
+    title: 'Thieving, Puro Puro & Jewellery',
+    sub: 'Tasks 201–221 · Thieving grind, implings, amulet/ring crafting',
+    tasks: [
+      { id: 192, text: 'Pickpocket Farmer south of Varlamore to 36 Thieving' },
+      { id: 193, text: 'Run southwest to fairy ring — tele to Zanaris', tag: 'tele' },
+      { id: 194, text: 'Buy Slayer Staff (for Death\'s Coffers task) and anti-dragon shield — wear shield' },
+      { id: 195, text: '⚠️ Skip if <17 Hunter — enter Puro Puro in wheat field', tag: 'warn' },
+      { id: 196, text: 'Claim butterfly net from Elnock Inquisitor (can drop jugs of wine)', tag: 'opt' },
+      { id: 197, text: 'Catch 50 implings in Puro Puro (spawn camp baby/young impling)', tag: 'opt' },
+      { id: 198, text: 'Teleport to Aldarin (CKQ)', tag: 'tele' },
+      { id: 199, text: 'Run to Ruby Harvests to the west — catch 1' },
+      { id: 200, text: 'Go upstairs in house northeast of ruby harvests — lockpick chests until 2 gold bars and 40+ Thieving. Keep uncut diamonds, gold bars, blessed bone shards, desirable seeds.' },
+      { id: 201, text: 'After 40 Thieving / 2 gold bars — league menu tele to Varlamore', tag: 'tele' },
+      { id: 202, text: 'Run southeast to bank — withdraw amulet mould, ring mould, cut sapphire, cut emerald', tag: 'bank',
+        inv: { label: 'Jewellery crafting', location: '📍 Varlamore Bank', items: [
+          { icon: '💍', name: 'Amulet Mould' },
+          { icon: '💍', name: 'Ring Mould' },
+          { icon: '💎', name: 'Cut Sapphire' },
+          { icon: '💚', name: 'Cut Emerald' },
+        ]}
+      },
+      { id: 203, text: 'Make sapphire amulet and emerald ring at furnace' },
+      { id: 204, text: 'Pickpocket Guards until 28 coin pouches (don\'t open until you have all)' },
+      { id: 205, text: 'Open all 28 coin pouches at once' },
+      { id: 206, text: 'Run to southern Varlamore gate — pickpocket master farmer south of Varlamore' },
+      { id: 207, text: 'Run east — defeat 3 chickens in 6 seconds (melee). Can mage the 3rd for a better hit. Cheese: get all 3 to low HP and re-engage.', tag: 'warn' },
+      { id: 208, text: '📖 NOTE: First Magic Pact lets you boost level for earth blast (53 Magic) and Civitas tele (54 Magic). Don\'t take the pact just for this — only if already planned. You get 3 resets total, earned by killing Echo bosses.' },
+      { id: 209, text: 'Run to bank — withdraw death rune — cast Earth Blast if 53 Magic', tag: 'opt' },
+      { id: 210, text: 'Cast Civitas teleport if 54 Magic', tag: 'opt' },
+    ]
+  },
+  {
+    id: 's13',
+    icon: '🌴',
+    title: 'Karamja',
+    sub: 'Tasks 228–264 · Agility arena, TzHaar, Shilo, Brimhaven, Tai Bwo Wannai',
+    tasks: [
+      { id: 211, text: 'Unlock Karamja region if you haven\'t already' },
+      { id: 212, text: 'Open league menu — teleport to Karamja', tag: 'tele' },
+      { id: 213, text: 'Run to Brimhaven Agility Arena — complete 10 tickets' },
+      { id: 214, text: 'Leave arena — buy snapdragon from Jackie' },
+      { id: 215, text: 'Run to Karamja volcano — go to TzHaar area' },
+      { id: 216, text: 'Safespot any TzHaar (water spells)' },
+      { id: 217, text: 'Go upstairs — run to Musa Point' },
+      { id: 218, text: 'Pick 10 bananas' },
+      { id: 219, text: 'Ask Luthas for a job — fill crate with bananas' },
+      { id: 220, text: 'League menu tele to Karamja or charter back to Brimhaven', tag: 'tele' },
+      { id: 221, text: 'Take cart to Shilo Village' },
+      { id: 222, text: 'Run north across bridge — go upstairs to the east' },
+      { id: 223, text: 'Pay barkeep to sleep in Paramaya Inn (may need to go upstairs to trigger task)' },
+      { id: 224, text: 'Take shortcut across river' },
+      { id: 225, text: 'Withdraw fly fishing rod, feathers', tag: 'bank',
+        inv: { label: 'Fishing in Shilo', location: '📍 Shilo Village', items: [
+          { icon: '🎣', name: 'Fly Fish Rod' },
+          { icon: '🪶', name: 'Feathers', qty: '1k' },
+        ]}
+      },
+      { id: 226, text: 'Fish 75 trout, 1+ salmon' },
+      { id: 227, text: 'Withdraw food, axe, small net, coins, slayer staff', tag: 'bank',
+        inv: { label: 'Brimhaven prep', location: '📍 Shilo / Brimhaven area', items: [
+          { icon: '🍖', name: 'Food', qty: 'stack' },
+          { icon: '🪓', name: 'Axe' },
+          { icon: '🎣', name: 'Small Net' },
+          { icon: '🪙', name: 'Coins' },
+          { icon: '🪄', name: 'Slayer Staff' },
+        ]}
+      },
+      { id: 228, text: 'Take cart to Brimhaven — kill snake near Fruit Tree patch' },
+      { id: 229, text: 'Run south to Brimhaven Dungeon — enter dungeon' },
+      { id: 230, text: 'Kill black demon in Brimhaven Dungeon (safespot)' },
+      { id: 231, text: 'Karamja tele on league menu', tag: 'tele' },
+      { id: 232, text: 'Run south to Tai Bwo Wannai — buy machete from General Store' },
+      { id: 233, text: 'Speak to Murcaily to begin Tai Bwo Wannai Cleanup (near hardwood grove)' },
+      { id: 234, text: 'Cut dense jungle until fully depleted' },
+      { id: 235, text: 'Run south — catch a karambwanji' },
+      { id: 236, text: 'Teleport to Varlamore with league menu', tag: 'tele' },
+      { id: 237, text: 'Run west to Death\'s Office — sacrifice Slayer Staff to Death' },
+      { id: 238, text: 'Buy buckets at General Store — fill up supercompost at farming patch to the west' },
+    ]
+  },
+];
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+
+function getState() {
+  try { return JSON.parse(localStorage.getItem('osrs_leagues_v5') || '{}'); }
+  catch { return {}; }
+}
+
+function saveState(state) {
+  localStorage.setItem('osrs_leagues_v5', JSON.stringify(state));
+}
+
+function resetAll() {
+  if (!confirm('Reset all progress? This cannot be undone.')) return;
+  localStorage.removeItem('osrs_leagues_v5');
+  document.querySelectorAll('.task-cb').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.task-item').classList.remove('done');
+  });
+  updateAll();
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+
+function buildInvCard(inv) {
+  const chips = inv.items.map(item => {
+    const cls = item.equipped ? 'inv-chip equipped-chip' : 'inv-chip new-chip';
+    const qty = item.qty ? ` <span style="color:var(--gold);font-size:10px">${item.qty}</span>` : '';
+    const eq = item.equipped ? ' <span style="font-size:9px;color:var(--blue-light)">(eq)</span>' : '';
+    return `<div class="${cls}"><span class="chip-icon">${item.icon}</span>${item.name}${qty}${eq}</div>`;
+  }).join('');
+  return `
+    <div class="inv-card">
+      <div class="inv-card-header">🎒 ${inv.label}</div>
+      <div class="inv-card-items">${chips}</div>
+    </div>`;
+}
+
+function buildTaskHTML(task, checked) {
+  const doneCls = checked ? ' done' : '';
+  const tagMap = { warn: 'tag-warn', opt: 'tag-opt', bank: 'tag-bank', tele: 'tag-tele' };
+  const tagLabel = { warn: '⚠ Note', opt: 'Optional', bank: '🏦 Bank', tele: '✈ Tele' };
+  const tagHTML = task.tag ? `<span class="tag ${tagMap[task.tag]}">${tagLabel[task.tag]}</span>` : '';
+  const invHTML = task.inv ? buildInvCard(task.inv) : '';
+
+  return `
+    <div class="task-item${doneCls}" data-id="${task.id}" onclick="toggleTask(${task.id}, this)">
+      <span class="task-num">${task.id}</span>
+      <input class="task-cb" type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation();toggleTask(${task.id},this.closest('.task-item'))">
+      <span class="task-text">${task.text}${tagHTML}</span>
+    </div>
+    ${invHTML}`;
+}
+
+function buildSectionHTML(section, state) {
+  const total = section.tasks.length;
+  const done = section.tasks.filter(t => state[t.id]).length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const optBadge = section.optional ? '<span class="tag tag-opt" style="margin-left:8px">Optional</span>' : '';
+
+  const tasksHTML = section.tasks.map(t => buildTaskHTML(t, !!state[t.id])).join('');
+
+  return `
+    <div class="section" id="section-${section.id}">
+      <div class="section-header" onclick="toggleSection('${section.id}')">
+        <span class="section-icon">${section.icon}</span>
+        <div class="section-title">
+          <h2>${section.title}${optBadge}</h2>
+          <div class="section-sub">${section.sub}</div>
+        </div>
+        <div class="section-progress">
+          <span class="section-count">${done}/${total}</span>
+          <div class="section-mini-bar">
+            <div class="section-mini-fill" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <span class="section-chevron">▼</span>
+      </div>
+      <div class="section-body">${tasksHTML}</div>
+    </div>`;
+}
+
+function buildNavHTML(section, state) {
+  const total = section.tasks.length;
+  const done = section.tasks.filter(t => state[t.id]).length;
+  const cls = done === total ? 'done' : done > 0 ? 'partial' : '';
+  return `<a class="nav-item ${cls}" href="#section-${section.id}">
+    <span class="nav-dot"></span>${section.title}
+  </a>`;
+}
+
+// ─────────────────────────────────────────────
+// INTERACTIONS
+// ─────────────────────────────────────────────
+
+function toggleTask(id, el) {
+  const state = getState();
+  const cb = el.querySelector('.task-cb');
+  const newVal = !state[id];
+  state[id] = newVal;
+  saveState(state);
+  if (cb) cb.checked = newVal;
+  el.classList.toggle('done', newVal);
+  updateAll();
+}
+
+function toggleSection(id) {
+  const el = document.getElementById('section-' + id);
+  el.classList.toggle('collapsed');
+}
+
+// ─────────────────────────────────────────────
+// INVENTORY SIDEBAR
+// ─────────────────────────────────────────────
+
+// Map: task id -> inventory snapshot that becomes active after this task is checked
+const INV_SNAPSHOTS = [];
+SECTIONS.forEach(s => s.tasks.forEach(t => {
+  if (t.inv) INV_SNAPSHOTS.push({ id: t.id, inv: t.inv });
+}));
+
+function updateSidebarInv(state) {
+  // Find the latest checked task that has an inventory snapshot
+  let currentSnap = null;
+  for (let i = INV_SNAPSHOTS.length - 1; i >= 0; i--) {
+    if (state[INV_SNAPSHOTS[i].id]) {
+      currentSnap = INV_SNAPSHOTS[i].inv;
+      break;
+    }
+  }
+
+  const grid = document.getElementById('sidebar-inv');
+  const loc = document.getElementById('sidebar-location');
+
+  if (!currentSnap) {
+    grid.innerHTML = Array(28).fill('<div class="inv-slot"><span class="item-icon" style="opacity:0.2">⬜</span></div>').join('');
+    loc.textContent = '📍 Starting out...';
+    return;
+  }
+
+  loc.textContent = currentSnap.location;
+  const slots = [];
+  currentSnap.items.forEach(item => {
+    const cls = item.equipped ? 'inv-slot equipped' : 'inv-slot';
+    const qty = item.qty ? `<span class="item-qty">${item.qty}</span>` : '';
+    slots.push(`<div class="${cls}" title="${item.name}${item.equipped ? ' (equipped)' : ''}">${qty}<span class="item-icon">${item.icon}</span><span class="item-name">${item.name}</span></div>`);
+  });
+  while (slots.length < 28) {
+    slots.push('<div class="inv-slot" style="opacity:0.2"><span class="item-icon">⬜</span></div>');
+  }
+  grid.innerHTML = slots.join('');
+}
+
+// ─────────────────────────────────────────────
+// PROGRESS
+// ─────────────────────────────────────────────
+
+function updateAll() {
+  const state = getState();
+  let totalTasks = 0, totalDone = 0;
+
+  SECTIONS.forEach(section => {
+    const total = section.tasks.length;
+    const done = section.tasks.filter(t => state[t.id]).length;
+    totalTasks += total;
+    totalDone += done;
+    const pct = total ? Math.round(done / total * 100) : 0;
+
+    const countEl = document.querySelector(`#section-${section.id} .section-count`);
+    const fillEl = document.querySelector(`#section-${section.id} .section-mini-fill`);
+    if (countEl) countEl.textContent = `${done}/${total}`;
+    if (fillEl) fillEl.style.width = pct + '%';
+  });
+
+  const gPct = totalTasks ? Math.round(totalDone / totalTasks * 100) : 0;
+  document.getElementById('global-bar').style.width = gPct + '%';
+  document.getElementById('global-count').textContent = `${totalDone} / ${totalTasks} tasks`;
+  document.getElementById('global-pct').textContent = gPct + '%';
+
+  updateNav(state);
+  updateSidebarInv(state);
+}
+
+function updateNav(state) {
+  const nav = document.getElementById('nav-list');
+  nav.innerHTML = SECTIONS.map(s => buildNavHTML(s, state)).join('');
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+
+function init() {
+  const state = getState();
+  const container = document.getElementById('sections-container');
+  container.innerHTML = SECTIONS.map(s => buildSectionHTML(s, state)).join('');
+  updateAll();
+}
+
+init();
+</script>
+</body>
+</html>
