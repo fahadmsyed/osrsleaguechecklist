@@ -105,6 +105,11 @@
   .chip-name{font-size:9.5px;color:var(--text);line-height:1.1;white-space:nowrap;}
   .chip-qty{font-size:8.5px;color:var(--gold);font-weight:bold;white-space:nowrap;margin-left:1px;}
   .inv-card-note{padding:3px 8px 5px;font-size:10px;color:var(--text-dim);font-style:italic;border-top:1px solid rgba(90,64,16,.4);}
+  .inv-card-gp{margin-left:auto;color:var(--gold);font-size:10px;font-weight:700;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);border-radius:3px;padding:1px 5px;white-space:nowrap;}
+  .coin-bar{display:none;align-items:center;gap:6px;padding:5px 10px 6px;border-bottom:1px solid var(--border);background:rgba(200,168,75,.06);}
+  .coin-bar img{width:20px;height:20px;image-rendering:pixelated;}
+  .coin-bar .cb-amount{color:var(--gold-light);font-size:15px;font-weight:800;}
+  .coin-bar .cb-label{color:var(--text-dim);font-size:9px;text-transform:uppercase;letter-spacing:.5px;}
 
   ::-webkit-scrollbar{width:8px;} ::-webkit-scrollbar-track{background:var(--dark2);} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
   @media(max-width:900px){.layout{flex-direction:column;}.sidebar{position:static;height:auto;width:100%;}}
@@ -122,6 +127,7 @@
   <div class="inv-panel">
     <div class="inv-panel-header"><span style="font-size:16px">🎒</span><h3>Current Inventory</h3></div>
     <div class="inv-sublabel" id="sidebar-label">Starting out...</div>
+    <div class="coin-bar" id="coin-bar"><img src="https://oldschool.runescape.wiki/images/Coins_10000.png"><span class="cb-amount" id="coin-amount">—</span><span class="cb-label">total gp</span></div>
     <div class="inv-grid" id="sidebar-inv"></div>
     <div class="inv-location" id="sidebar-location">📍 —</div>
   </div>
@@ -291,236 +297,263 @@ const E = (n,q) => slot(n,q,{eq:true});
 const N = (n,q) => slot(n,q,{new:true});
 const G = (n,q) => slot(n,q,{gone:true});
 
+function fmtGP(n) {
+  if (n == null) return null;
+  if (n >= 1000000) return (n/1000000).toFixed(1).replace('.0','')+'M gp';
+  if (n >= 10000)   return Math.round(n/1000)+'k gp';
+  if (n >= 1000)    return (n/1000).toFixed(1).replace('.0','')+'k gp';
+  return n+' gp';
+}
+
 // ── INVENTORY SNAPSHOTS ───────────────────────────────────────────────────
 const INV = [
-  { id:6,  label:'After filling bucket', location:'📍 House east of spawn, Varlamore',
-    items:[slot('Coins'), N('Bucket of water')] },
+  { id:6,  coins:0,   label:'After filling bucket', location:'📍 House east of spawn, Varlamore',
+    items:[slot('Coins','0 gp'), N('Bucket of water')] },
 
-  { id:13, label:'Stole cakes from Bazaar', location:'📍 Varlamore Bazaar',
-    items:[slot('Coins'), N('Cake','×14+'), slot('Bucket of water')] },
+  { id:13, coins:0,   label:'Stole cakes from Bazaar', location:'📍 Varlamore Bazaar',
+    items:[slot('Coins','0 gp'), N('Cake','×14+'), slot('Bucket of water')] },
 
-  { id:15, label:'Sold cakes (1 at a time)', location:'📍 Varlamore General Store',
-    items:[N('Coins','260+'), slot('Bucket of water')] },
+  { id:15, coins:260, label:'Sold cakes (1 at a time)', location:'📍 Varlamore General Store',
+    items:[N('Coins','~260 gp'), slot('Bucket of water')] },
 
-  { id:16, label:'Bought General Store supplies', location:'📍 Varlamore General Store',
-    items:[slot('Coins','~200'), N('Knife'), N('Chisel'), N('Spade'), N('Bird snare','×2'), slot('Bucket of water')] },
+  { id:16, coins:250, label:'Bought General Store supplies', location:'📍 Varlamore General Store',
+    items:[slot('Coins','~250 gp'), N('Knife'), N('Chisel'), N('Spade'), N('Bird snare','×2'), slot('Bucket of water')],
+    note:'Spent ~10 gp: knife, chisel, spade, 2 bird snares.' },
 
-  { id:17, label:'Bought clothing', location:'📍 Varlamore Clothing Shop',
-    items:[slot('Coins','~100'), slot('Knife'), slot('Chisel'), slot('Spade'), slot('Bird snare','×2'), slot('Bucket of water'), N('Pink skirt'), N('Brown apron'), N('Red cape')] },
+  { id:17, coins:184, label:'Bought clothing', location:'📍 Varlamore Clothing Shop',
+    items:[slot('Coins','~184 gp'), slot('Knife'), slot('Chisel'), slot('Spade'), slot('Bird snare','×2'), slot('Bucket of water'), N('Pink skirt'), N('Brown apron'), N('Red cape')],
+    note:'Spent 66 gp: Pink Skirt (32) + Brown Apron (32) + Red Cape (2).' },
 
-  { id:24, label:'After burn 1 log + fletch 1 into shafts', location:'📍 South Varlamore',
-    items:[slot('Coins'), slot('Knife'), slot('Chisel'), slot('Spade'), slot('Bird snare','×2'), slot('Bucket of water'), slot('Pink skirt'), slot('Brown apron'), slot('Red cape'), N('Arrow shaft','×15')],
+  { id:24, coins:184, label:'After burn 1 log + fletch 1 into shafts', location:'📍 South Varlamore',
+    items:[slot('Coins','~184 gp'), slot('Knife'), slot('Chisel'), slot('Spade'), slot('Bird snare','×2'), slot('Bucket of water'), slot('Pink skirt'), slot('Brown apron'), slot('Red cape'), N('Arrow shaft','×15')],
     note:'1 log burned. 1 log → 15 arrow shafts (knife + log).' },
 
-  { id:25, label:'Deposited ALL — withdrew coins', location:'📍 East Bank, Varlamore',
-    items:[N('Coins')], note:'Everything else banked.' },
+  { id:25, coins:184, label:'Deposited ALL — withdrew coins', location:'📍 East Bank, Varlamore',
+    items:[N('Coins','~184 gp')], note:'Everything else banked.' },
 
-  { id:28, label:'Bought glassblowing supplies', location:'📍 Charter Shop, Varlamore',
-    items:[slot('Coins'), N('Bucket of sand','×10'), N('Soda ash','×10'), N('Glassblowing pipe')] },
+  { id:28, coins:112, label:'Bought glassblowing supplies', location:'📍 Charter Shop, Varlamore',
+    items:[slot('Coins','~112 gp'), N('Bucket of sand','×10'), N('Soda ash','×10'), N('Glassblowing pipe')],
+    note:'Spent ~72 gp: 10 sand (5 ea=50) + 10 soda ash (2 ea=20) + pipe (~2).' },
 
-  { id:29, label:'Made molten glass (×10) → banked it', location:'📍 Varlamore Furnace / Bank',
-    items:[slot('Coins'), slot('Glassblowing pipe'), G('Bucket of sand','×10→'), G('Soda ash','×10→')],
-    note:'10 Bucket of sand + 10 Soda ash → 10 Molten glass at furnace. Molten glass deposited at bank.' },
+  { id:29, coins:112, label:'Made molten glass (×10) → banked it', location:'📍 Varlamore Furnace / Bank',
+    items:[slot('Coins','~112 gp'), slot('Glassblowing pipe'), G('Bucket of sand','×10→'), G('Soda ash','×10→')],
+    note:'10 sand + 10 soda ash → 10 Molten glass at furnace. Deposited at bank.' },
 
-  { id:30, label:'Bought second round of supplies', location:'📍 Charter Shop, Varlamore',
-    items:[slot('Coins'), slot('Glassblowing pipe'), N('Bucket of sand','×10'), N('Soda ash','×10')] },
+  { id:30, coins:42,  label:'Bought second round of supplies', location:'📍 Charter Shop, Varlamore',
+    items:[slot('Coins','~42 gp'), slot('Glassblowing pipe'), N('Bucket of sand','×10'), N('Soda ash','×10')],
+    note:'Spent ~70 gp: 10 more sand + 10 more soda ash.' },
 
-  { id:31, label:'Made 10 oil lanterns (→ 20 Crafting)', location:'📍 Varlamore Furnace',
-    items:[slot('Coins'), slot('Glassblowing pipe'), N('Oil lantern','×10')],
+  { id:31, coins:42,  label:'Made 10 oil lanterns (→ 20 Crafting)', location:'📍 Varlamore Furnace',
+    items:[slot('Coins','~42 gp'), slot('Glassblowing pipe'), N('Oil lantern','×10')],
     note:'10 sand + 10 ash → 10 Molten glass → 10 Oil lanterns (glassblowing pipe).' },
 
-  { id:32, label:'Deposited lanterns — withdrew travel items', location:'📍 East Bank, Varlamore',
-    items:[slot('Coins'), N('Bucket of water'), N('Air rune'), N('Mind rune'), E('Dramen staff'), N('Spade'), N('Pot')] },
+  { id:32, coins:42,  label:'Deposited lanterns — withdrew travel items', location:'📍 East Bank, Varlamore',
+    items:[slot('Coins','~42 gp'), N('Bucket of water'), N('Air rune'), N('Mind rune'), E('Dramen staff'), N('Spade'), N('Pot')] },
 
-  { id:33, label:'Bought shears', location:'📍 Crafting Shop, West Varlamore',
-    items:[slot('Coins'), slot('Bucket of water'), slot('Air rune'), slot('Mind rune'), E('Dramen staff'), slot('Spade'), slot('Pot'), N('Shears')] },
+  { id:33, coins:41,  label:'Bought shears', location:'📍 Crafting Shop, West Varlamore',
+    items:[slot('Coins','~41 gp'), slot('Bucket of water'), slot('Air rune'), slot('Mind rune'), E('Dramen staff'), slot('Spade'), slot('Pot'), N('Shears')] },
 
-  { id:45, label:'Milked dairy buffalo', location:'📍 Ortus Farm, West Varlamore',
-    items:[slot('Coins'), N('Bucket of milk'), slot('Air rune'), slot('Mind rune'), E('Dramen staff'), slot('Spade'), slot('Pot'), slot('Shears')],
-    note:'Empty bucket → Bucket of milk.' },
+  { id:45, coins:40,  label:'Milked dairy buffalo', location:'📍 Ortus Farm, West Varlamore',
+    items:[slot('Coins','~40 gp'), N('Bucket of milk'), slot('Air rune'), slot('Mind rune'), E('Dramen staff'), slot('Spade'), slot('Pot'), slot('Shears')],
+    note:'Empty bucket → Bucket of milk. (Rake cost ~1 gp at task 44.)' },
 
-  { id:46, label:'Sheared alpaca', location:'📍 Ortus Farm, West Varlamore',
-    items:[slot('Coins'), slot('Bucket of milk'), slot('Air rune'), slot('Mind rune'), E('Dramen staff'), slot('Spade'), slot('Pot'), slot('Shears'), N('Wool')] },
+  { id:46, coins:40,  label:'Sheared alpaca', location:'📍 Ortus Farm, West Varlamore',
+    items:[slot('Coins','~40 gp'), slot('Bucket of milk'), slot('Air rune'), slot('Mind rune'), E('Dramen staff'), slot('Spade'), slot('Pot'), slot('Shears'), N('Wool')] },
 
-  { id:49, label:'Killed cow in Zanaris (cowhide)', location:'📍 Zanaris',
-    items:[slot('Coins'), slot('Bucket of milk'), slot('Air rune'), slot('Mind rune'), E('Dramen staff'), slot('Spade'), slot('Pot'), slot('Shears'), slot('Wool'), N('Cowhide')],
+  { id:49, coins:40,  label:'Killed cow in Zanaris (cowhide)', location:'📍 Zanaris',
+    items:[slot('Coins','~40 gp'), slot('Bucket of milk'), slot('Air rune'), slot('Mind rune'), E('Dramen staff'), slot('Spade'), slot('Pot'), slot('Shears'), slot('Wool'), N('Cowhide')],
     note:'Bones buried on the spot.' },
 
-  { id:55, label:'Deposited ALL at Aldarin bank', location:'📍 Aldarin Bank',
-    items:[], note:'Full bank deposit — inventory cleared.' },
+  { id:55, coins:40,  label:'Deposited ALL at Aldarin bank', location:'📍 Aldarin Bank',
+    items:[], note:'Full bank deposit — ~40 gp in bank.' },
 
-  { id:56, label:'Withdrew coins + chisel', location:'📍 Aldarin Bank',
-    items:[N('Coins','25+'), N('Chisel')] },
+  { id:56, coins:40,  label:'Withdrew coins + chisel', location:'📍 Aldarin Bank',
+    items:[N('Coins','~40 gp'), N('Chisel')] },
 
-  { id:61, label:'After gem cutting (~50k gp) + bought gems for later', location:'📍 Aldarin Crafting Shop',
-    items:[slot('Coins','50k+'), slot('Chisel'), N('Sapphire','×3'), N('Emerald','×3'), N('Ruby','×3')] },
+  { id:61, coins:50000, label:'After gem cutting (~50k gp) + bought gems for later', location:'📍 Aldarin Crafting Shop',
+    items:[slot('Coins','~50k gp'), slot('Chisel'), N('Sapphire','×3'), N('Emerald','×3'), N('Ruby','×3')],
+    note:'Gem cutting session complete. ~50,000 gp profit from selling cut gems.' },
 
-  { id:62, label:'Bought charter supplies', location:'📍 Charter Ship',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), N('Raw rabbit','×5'), N('Tyras helm'), N('Bucket'), N('Tinderbox')] },
+  { id:62, coins:48200, label:'Bought charter supplies', location:'📍 Charter Ship',
+    items:[slot('Coins','~48k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), N('Raw rabbit','×5'), N('Tyras helm'), N('Bucket'), N('Tinderbox')],
+    note:'Spent ~1,800 gp on charter supplies (tyras helm, raw rabbit, bucket, tinderbox).' },
 
-  { id:63, label:'Cooked rabbit — ate 1', location:'📍 Range near Aldarin Charters',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), N('Cooked rabbit','×3±'), slot('Tyras helm'), slot('Bucket'), slot('Tinderbox')],
+  { id:63, coins:48200, label:'Cooked rabbit — ate 1', location:'📍 Range near Aldarin Charters',
+    items:[slot('Coins','~48k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), N('Cooked rabbit','×3±'), slot('Tyras helm'), slot('Bucket'), slot('Tinderbox')],
     note:'Ate 1 cooked rabbit. Some may have burned — buy more raw if needed.' },
 
-  { id:66, label:'Torch lit + dropped; tinderbox dropped', location:'📍 Sunset Coast General Store',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Cooked rabbit','×3'), slot('Tyras helm'), slot('Bucket')],
-    note:'Torch bought, lit, dropped. Tinderbox also dropped.' },
+  { id:66, coins:48170, label:'Torch lit + dropped; tinderbox dropped', location:'📍 Sunset Coast General Store',
+    items:[slot('Coins','~48k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Cooked rabbit','×3'), slot('Tyras helm'), slot('Bucket')],
+    note:'Torch bought (~30 gp), lit, dropped. Tinderbox also dropped.' },
 
-  { id:67, label:'Filled bucket at sand pit, dropped sand', location:'📍 Sunset Coast Sand Pit',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Cooked rabbit','×3'), slot('Tyras helm'), slot('Bucket')],
+  { id:67, coins:48170, label:'Filled bucket at sand pit, dropped sand', location:'📍 Sunset Coast Sand Pit',
+    items:[slot('Coins','~48k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Cooked rabbit','×3'), slot('Tyras helm'), slot('Bucket')],
     note:'Bucket filled with sand for emote task, sand dropped — bucket back to empty.' },
 
-  { id:69, label:'Bought feathers + big net', location:'📍 Sunset Coast Fishing Shop',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Cooked rabbit','×2'), slot('Tyras helm'), slot('Bucket'), N('Feather','×1000'), N('Big fishing net')] },
+  { id:69, coins:47070, label:'Bought feathers + big net', location:'📍 Sunset Coast Fishing Shop',
+    items:[slot('Coins','~47k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Cooked rabbit','×2'), slot('Tyras helm'), slot('Bucket'), N('Feather','×1000'), N('Big fishing net')],
+    note:'Spent ~1,100 gp: 1,000 feathers (×1 ea) + big net (~100).' },
 
-  { id:73, label:'Fished casket, old boot, house key', location:'📍 Civitas Park Pond',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), N('Casket'), N('Old boot'), N('House key')],
-    note:'15 pineapples banked immediately. Cooked rabbit consumed during fishing.' },
+  { id:73, coins:46920, label:'Fished casket, old boot, house key', location:'📍 Civitas Park Pond',
+    items:[slot('Coins','~46.9k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), N('Casket'), N('Old boot'), N('House key')],
+    note:'15 pineapples banked (~150 gp). Cooked rabbit consumed during fishing.' },
 
-  { id:75, label:'Bought bar items', location:'📍 Civitas Bar',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), slot('Casket'), slot('Old boot'), slot('House key'), N('Cup of tea'), N('Moon-lite'), N('Stew'), N('Jug of wine')] },
+  { id:75, coins:46870, label:'Bought bar items', location:'📍 Civitas Bar',
+    items:[slot('Coins','~46.9k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), slot('Casket'), slot('Old boot'), slot('House key'), N('Cup of tea'), N('Moon-lite'), N('Stew'), N('Jug of wine')],
+    note:'Spent ~50 gp at the bar (cup of tea, Moon-lite, stew, jug of wine).' },
 
-  { id:76, label:'Drank Moon-lite + jug of wine', location:'📍 Civitas Bar',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), slot('Casket'), slot('Old boot'), slot('House key'), slot('Cup of tea'), slot('Stew')] },
+  { id:76, coins:46870, label:'Drank Moon-lite + jug of wine', location:'📍 Civitas Bar',
+    items:[slot('Coins','~46.9k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), slot('Casket'), slot('Old boot'), slot('House key'), slot('Cup of tea'), slot('Stew')] },
 
-  { id:78, label:'Bought steel mace', location:'📍 Civitas Mace Shop',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), slot('Casket'), slot('Old boot'), slot('House key'), slot('Cup of tea'), slot('Stew'), N('Steel mace')] },
+  { id:78, coins:45570, label:'Bought steel mace + POH', location:'📍 Civitas Mace Shop / Estate Agent',
+    items:[slot('Coins','~45.6k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), slot('Casket'), slot('Old boot'), slot('House key'), slot('Cup of tea'), slot('Stew'), N('Steel mace')],
+    note:'Spent ~1,300 gp: POH (~1,000) + steel mace (~300).' },
 
-  { id:81, label:'Gave Oli the stew', location:'📍 West Civitas',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), slot('Casket'), slot('Old boot'), slot('House key'), slot('Cup of tea'), slot('Steel mace')] },
+  { id:81, coins:45570, label:'Gave Oli the stew', location:'📍 West Civitas',
+    items:[slot('Coins','~45.6k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), slot('Casket'), slot('Old boot'), slot('House key'), slot('Cup of tea'), slot('Steel mace')] },
 
-  { id:83, label:'Drank cup of tea', location:'📍 Aubernvale',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), slot('Casket'), slot('Old boot'), slot('House key'), slot('Steel mace')] },
+  { id:83, coins:45570, label:'Drank cup of tea', location:'📍 Aubernvale',
+    items:[slot('Coins','~45.6k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Tyras helm'), slot('Bucket'), slot('Feather','×1000'), slot('Big fishing net'), slot('Casket'), slot('Old boot'), slot('House key'), slot('Steel mace')] },
 
-  { id:84, label:'Deposited steel mace / big net / tyras helm / bucket', location:'📍 Aubernvale Bank',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('Casket'), slot('Old boot'), slot('House key')] },
+  { id:84, coins:45570, label:'Deposited steel mace / big net / tyras helm / bucket', location:'📍 Aubernvale Bank',
+    items:[slot('Coins','~45.6k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('Casket'), slot('Old boot'), slot('House key')] },
 
-  { id:85, label:'Withdrew axe / knife / cowhide / wool', location:'📍 Aubernvale Bank',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('Casket'), slot('Old boot'), slot('House key'), N('Iron axe'), N('Knife'), N('Cowhide'), N('Wool')] },
+  { id:85, coins:45570, label:'Withdrew axe / knife / cowhide / wool', location:'📍 Aubernvale Bank',
+    items:[slot('Coins','~45.6k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('Casket'), slot('Old boot'), slot('House key'), N('Iron axe'), N('Knife'), N('Cowhide'), N('Wool')] },
 
-  { id:86, label:'Bought air staff + fire staff', location:'📍 Aubernvale Staff Shop',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('Casket'), slot('House key'), slot('Knife'), slot('Cowhide'), slot('Wool'), E('Staff of air'), N('Staff of fire')] },
+  { id:86, coins:41570, label:'Bought air staff + fire staff', location:'📍 Aubernvale Staff Shop',
+    items:[slot('Coins','~41.6k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('Casket'), slot('House key'), slot('Knife'), slot('Cowhide'), slot('Wool'), E('Staff of air'), N('Staff of fire')],
+    note:'Spent ~4,000 gp: air staff (~2,000) + fire staff (~2,000).' },
 
-  { id:87, label:'Bought steel / mith / addy axe', location:'📍 Aubernvale Axe Shop',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), slot('Cowhide'), slot('Wool'), N('Steel axe'), N('Mithril axe'), N('Adamant axe')],
-    note:'Inventory nearly full. Drop old/weaker axe if needed. Equip adamant axe for WC.' },
+  { id:87, coins:39070, label:'Bought steel / mith / addy axe', location:'📍 Aubernvale Axe Shop',
+    items:[slot('Coins','~39k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), slot('Cowhide'), slot('Wool'), N('Steel axe'), N('Mithril axe'), N('Adamant axe')],
+    note:'Spent ~2,500 gp: steel (~200) + mith (~800) + addy (~1,500) axe. Inventory nearly full.' },
 
-  { id:91, label:'Tanned cowhide → leather', location:'📍 Aubernvale Tanner',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), N('Leather'), slot('Wool'), E('Adamant axe')],
-    note:'1 Cowhide → 1 Leather at the tanner.' },
+  { id:91, coins:39068, label:'Tanned cowhide → leather', location:'📍 Aubernvale Tanner',
+    items:[slot('Coins','~39k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), N('Leather'), slot('Wool'), E('Adamant axe')],
+    note:'1 Cowhide → 1 Leather at the tanner (~2 gp).' },
 
-  { id:92, label:'Bought needle + thread', location:'📍 Aubernvale General Store',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), slot('Leather'), slot('Wool'), E('Adamant axe'), N('Needle'), N('Thread')] },
+  { id:92, coins:39066, label:'Bought needle + thread', location:'📍 Aubernvale General Store',
+    items:[slot('Coins','~39k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), slot('Leather'), slot('Wool'), E('Adamant axe'), N('Needle'), N('Thread')] },
 
-  { id:93, label:'Crafted leather chaps', location:'📍 Aubernvale',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), N('Leather chaps'), slot('Wool'), E('Adamant axe'), slot('Needle')],
+  { id:93, coins:39066, label:'Crafted leather chaps', location:'📍 Aubernvale',
+    items:[slot('Coins','~39k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), N('Leather chaps'), slot('Wool'), E('Adamant axe'), slot('Needle')],
     note:'Leather + needle/thread → Leather chaps. Thread consumed; needle kept.' },
 
-  { id:97, label:'Claimed Forestry Kit', location:'📍 Forestry Shop, near Nemus Retreat',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), slot('Leather chaps'), slot('Wool'), E('Adamant axe'), slot('Needle'), N('Forestry kit')] },
+  { id:97, coins:39066, label:'Claimed Forestry Kit', location:'📍 Forestry Shop, near Nemus Retreat',
+    items:[slot('Coins','~39k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), slot('Leather chaps'), slot('Wool'), E('Adamant axe'), slot('Needle'), N('Forestry kit')] },
 
-  { id:100, label:'Spun wool → ball of wool + flax → bowstring', location:'📍 Spinning wheel',
-    items:[slot('Coins'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), slot('Leather chaps'), N('Ball of wool'), E('Adamant axe'), slot('Needle'), N('Bow string'), N('Flax','×5')],
+  { id:100, coins:39066, label:'Spun wool → ball of wool + flax → bowstring', location:'📍 Spinning wheel',
+    items:[slot('Coins','~39k gp'), slot('Chisel'), slot('Sapphire','×3'), slot('Emerald','×3'), slot('Ruby','×3'), slot('Feather','×1000'), slot('House key'), E('Staff of air'), slot('Staff of fire'), slot('Knife'), slot('Leather chaps'), N('Ball of wool'), E('Adamant axe'), slot('Needle'), N('Bow string'), N('Flax','×5')],
     note:'1 Wool → Ball of wool. 1 Flax → Bow string. 5 Flax remaining from picking 6.' },
 
-  { id:108, label:'Deposited ALL — withdrew for Tal Teklan', location:'📍 Aubernvale Bank',
-    items:[N('Coins'), E('Adamant axe'), N('Bird snare','×2'), N('Green cape'), N('Steel mace')] },
+  { id:108, coins:39066, label:'Deposited ALL — withdrew for Tal Teklan', location:'📍 Aubernvale Bank',
+    items:[N('Coins','~39k gp'), E('Adamant axe'), N('Bird snare','×2'), N('Green cape'), N('Steel mace')] },
 
-  { id:110, label:'Bought runes in Tal Teklan', location:'📍 Tal Teklan Rune Shop',
-    items:[slot('Coins'), E('Adamant axe'), slot('Bird snare','×2'), slot('Green cape'), slot('Steel mace'), N('Air rune'), N('Fire rune'), N('Water rune'), N('Earth rune'), N('Mind rune'), N('Cosmic rune'), N('Nature rune','×75'), N('Chaos rune'), N('Death rune')] },
+  { id:110, coins:34066, label:'Bought runes in Tal Teklan', location:'📍 Tal Teklan Rune Shop',
+    items:[slot('Coins','~34k gp'), E('Adamant axe'), slot('Bird snare','×2'), slot('Green cape'), slot('Steel mace'), N('Air rune'), N('Fire rune'), N('Water rune'), N('Earth rune'), N('Mind rune'), N('Cosmic rune'), N('Nature rune','×75'), N('Chaos rune'), N('Death rune')],
+    note:'Spent ~5,000 gp on rune packs.' },
 
-  { id:112, label:'Bought purple dye — dyed cape purple', location:'📍 Tal Teklan (west)',
-    items:[slot('Coins'), E('Adamant axe'), slot('Bird snare','×2'), N('Purple cape'), slot('Steel mace'), slot('Air rune'), slot('Fire rune'), slot('Water rune'), slot('Earth rune'), slot('Mind rune'), slot('Cosmic rune'), slot('Nature rune','×75'), slot('Chaos rune'), slot('Death rune')],
-    note:'Green cape + Purple dye → Purple cape. Dye consumed.' },
+  { id:112, coins:34061, label:'Bought purple dye — dyed cape purple', location:'📍 Tal Teklan (west)',
+    items:[slot('Coins','~34k gp'), E('Adamant axe'), slot('Bird snare','×2'), N('Purple cape'), slot('Steel mace'), slot('Air rune'), slot('Fire rune'), slot('Water rune'), slot('Earth rune'), slot('Mind rune'), slot('Cosmic rune'), slot('Nature rune','×75'), slot('Chaos rune'), slot('Death rune')],
+    note:'Green cape + Purple dye (~5 gp) → Purple cape.' },
 
-  { id:114, label:'Bought 10 iron arrows + shortbow', location:'📍 Tal Teklan Ranged Shop',
-    items:[slot('Coins'), E('Adamant axe'), slot('Bird snare','×2'), slot('Purple cape'), slot('Steel mace'), slot('Air rune'), slot('Fire rune'), slot('Water rune'), slot('Earth rune'), slot('Mind rune'), slot('Cosmic rune'), slot('Nature rune','×75'), slot('Chaos rune'), slot('Death rune'), N('Iron arrow','×10'), N('Shortbow')] },
+  { id:114, coins:33851, label:'Bought 10 iron arrows + shortbow', location:'📍 Tal Teklan Ranged Shop',
+    items:[slot('Coins','~34k gp'), E('Adamant axe'), slot('Bird snare','×2'), slot('Purple cape'), slot('Steel mace'), slot('Air rune'), slot('Fire rune'), slot('Water rune'), slot('Earth rune'), slot('Mind rune'), slot('Cosmic rune'), slot('Nature rune','×75'), slot('Chaos rune'), slot('Death rune'), N('Iron arrow','×10'), N('Shortbow')],
+    note:'Spent ~210 gp: 10 iron arrows + shortbow.' },
 
-  { id:115, label:'Deposited 5 nature runes', location:'📍 Tal Teklan Bank',
-    items:[slot('Coins'), E('Adamant axe'), slot('Bird snare','×2'), slot('Purple cape'), slot('Steel mace'), slot('Air rune'), slot('Fire rune'), slot('Water rune'), slot('Earth rune'), slot('Mind rune'), slot('Cosmic rune'), slot('Nature rune','×70'), slot('Chaos rune'), slot('Death rune'), slot('Iron arrow','×10'), slot('Shortbow')] },
+  { id:115, coins:33851, label:'Deposited 5 nature runes', location:'📍 Tal Teklan Bank',
+    items:[slot('Coins','~34k gp'), E('Adamant axe'), slot('Bird snare','×2'), slot('Purple cape'), slot('Steel mace'), slot('Air rune'), slot('Fire rune'), slot('Water rune'), slot('Earth rune'), slot('Mind rune'), slot('Cosmic rune'), slot('Nature rune','×70'), slot('Chaos rune'), slot('Death rune'), slot('Iron arrow','×10'), slot('Shortbow')] },
 
-  { id:122, label:'Bought all fishing supplies in Kastori', location:'📍 Kastori Fishing Shop',
-    items:[slot('Coins'), slot('Steel mace'), N('Small fishing net'), N('Fishing rod'), N('Fly fishing rod'), N('Harpoon'), N('Lobster pot'), N('Fishing bait','×50'), N('Raw sardine','×fill')],
-    note:'Fill remaining inventory slots with raw sardines from the shop.' },
+  { id:122, coins:33251, label:'Bought all fishing supplies in Kastori', location:'📍 Kastori Fishing Shop',
+    items:[slot('Coins','~33k gp'), slot('Steel mace'), N('Small fishing net'), N('Fishing rod'), N('Fly fishing rod'), N('Harpoon'), N('Lobster pot'), N('Fishing bait','×50'), N('Raw sardine','×fill')],
+    note:'Spent ~600 gp: small net, fishing rod, fly rod, harpoon, lobster pot, 50 bait + sardines.' },
 
-  { id:123, label:'Cooked sardines', location:'📍 Range west of Kastori',
-    items:[slot('Coins'), slot('Steel mace'), slot('Small fishing net'), slot('Fishing rod'), slot('Fly fishing rod'), slot('Harpoon'), slot('Lobster pot'), slot('Fishing bait','×50'), N('Sardine','×5+')],
-    note:'Raw sardine → Sardine. Cook at range to the west. Buy more raw if you failed 5.' },
+  { id:123, coins:33251, label:'Cooked sardines', location:'📍 Range west of Kastori',
+    items:[slot('Coins','~33k gp'), slot('Steel mace'), slot('Small fishing net'), slot('Fishing rod'), slot('Fly fishing rod'), slot('Harpoon'), slot('Lobster pot'), slot('Fishing bait','×50'), N('Sardine','×5+')],
+    note:'Raw sardine → Sardine. Cook at range to the west.' },
 
-  { id:129, label:'Killed imp — kept ashes', location:'📍 Kastori Dungeon',
-    items:[slot('Coins'), slot('Steel mace'), slot('Small fishing net'), slot('Fishing rod'), slot('Fly fishing rod'), slot('Harpoon'), slot('Lobster pot'), slot('Fishing bait'), slot('Sardine','×some'), N('Ashes')],
-    note:'Killed with earth spell. Ashes will be buried in Yama\'s lair (task 135/137).' },
+  { id:129, coins:33251, label:'Killed imp — kept ashes', location:'📍 Kastori Dungeon',
+    items:[slot('Coins','~33k gp'), slot('Steel mace'), slot('Small fishing net'), slot('Fishing rod'), slot('Fly fishing rod'), slot('Harpoon'), slot('Lobster pot'), slot('Fishing bait'), slot('Sardine','×some'), N('Ashes')],
+    note:'Killed with earth spell. Ashes will be buried in Yama\'s lair.' },
 
-  { id:139, label:'Deposited ALL — withdrew coins + chisel', location:'📍 Aldarin Bank',
-    items:[N('Coins'), N('Chisel')] },
+  { id:139, coins:33251, label:'Deposited ALL — withdrew coins + chisel', location:'📍 Aldarin Bank',
+    items:[N('Coins','~33k gp'), N('Chisel')] },
 
-  { id:141, label:'Cutting rubies at gem shop', location:'📍 Aldarin Gem Shop',
-    items:[slot('Coins','growing...'), slot('Chisel')],
-    note:'Buy uncut rubies, cut, sell 1 at a time. ~400k gp profit at 70 Crafting.' },
+  { id:141, coins:33251, label:'Cutting rubies — GP growing', location:'📍 Aldarin Gem Shop',
+    items:[slot('Coins','~33k gp →'), slot('Chisel')],
+    note:'Buy uncut rubies, cut, sell 1 at a time. Goal: ~400k gp profit at 70 Crafting.' },
 
-  { id:145, label:'Bought raw fish at Sunset Coast', location:'📍 Sunset Coast Fishing Shop',
-    items:[slot('Coins'), slot('Chisel'), N('Raw tuna','×50'), N('Raw swordfish','×100')] },
+  { id:145, coins:413251, label:'Bought raw fish at Sunset Coast', location:'📍 Sunset Coast Fishing Shop',
+    items:[slot('Coins','~413k gp'), slot('Chisel'), N('Raw tuna','×50'), N('Raw swordfish','×100')],
+    note:'After ~400k gp gem cutting session. Spent ~20,000 gp on 50 tuna + 100 swordfish.' },
 
-  { id:147, label:'Bought herblore supplies at Cam Torum', location:'📍 Cam Torum Herb Shop',
-    items:[slot('Coins'), slot('Chisel'), slot('Raw tuna','×50'), slot('Raw swordfish','×100'), N('Vial of water','×pk'), N('Pestle and mortar'), N('Eye of newt','×pk')] },
+  { id:147, coins:412651, label:'Bought herblore supplies at Cam Torum', location:'📍 Cam Torum Herb Shop',
+    items:[slot('Coins','~413k gp'), slot('Chisel'), slot('Raw tuna','×50'), slot('Raw swordfish','×100'), N('Vial of water','×pk'), N('Pestle and mortar'), N('Eye of newt','×pk')],
+    note:'Spent ~600 gp on herblore supplies.' },
 
-  { id:148, label:'Bought pickaxes at Cam Torum', location:'📍 Cam Torum Mining Shop',
-    items:[slot('Coins'), slot('Chisel'), slot('Raw tuna','×50'), slot('Raw swordfish','×100'), slot('Vial of water'), slot('Pestle and mortar'), slot('Eye of newt'), N('Steel pickaxe'), N('Mithril pickaxe'), N('Adamant pickaxe'), N('Rune pickaxe')] },
+  { id:148, coins:391651, label:'Bought pickaxes at Cam Torum', location:'📍 Cam Torum Mining Shop',
+    items:[slot('Coins','~392k gp'), slot('Chisel'), slot('Raw tuna','×50'), slot('Raw swordfish','×100'), slot('Vial of water'), slot('Pestle and mortar'), slot('Eye of newt'), N('Steel pickaxe'), N('Mithril pickaxe'), N('Adamant pickaxe'), N('Rune pickaxe')],
+    note:'Spent ~21,000 gp: steel (~200) + mith (~1,000) + addy (~3,000) + rune (~18,000) pickaxe.' },
 
-  { id:154, label:'Deposited herblore supplies — withdrew big net', location:'📍 Cam Torum Bank',
-    items:[slot('Coins'), slot('Air rune','stacked'), slot('Steel pickaxe'), slot('Mithril pickaxe'), slot('Adamant pickaxe'), slot('Rune pickaxe'), N('Big fishing net')],
+  { id:154, coins:391651, label:'Deposited herblore supplies — withdrew big net', location:'📍 Cam Torum Bank',
+    items:[slot('Coins','~392k gp'), slot('Air rune','stacked'), slot('Steel pickaxe'), slot('Mithril pickaxe'), slot('Adamant pickaxe'), slot('Rune pickaxe'), N('Big fishing net')],
     note:'Herblore supplies deposited. Keep offensive mage runes and all pickaxes.' },
 
-  { id:155, label:'Bought 5 jugs of wine', location:'📍 Cam Torum Pub',
-    items:[slot('Coins'), slot('Air rune'), slot('Steel pickaxe'), slot('Mithril pickaxe'), slot('Adamant pickaxe'), slot('Rune pickaxe'), slot('Big fishing net'), N('Jug of wine','×5')] },
+  { id:155, coins:391601, label:'Bought 5 jugs of wine', location:'📍 Cam Torum Pub',
+    items:[slot('Coins','~392k gp'), slot('Air rune'), slot('Steel pickaxe'), slot('Mithril pickaxe'), slot('Adamant pickaxe'), slot('Rune pickaxe'), slot('Big fishing net'), N('Jug of wine','×5')] },
 
-  { id:157, label:'Bought armour + weapons from Varlamore blacksmith', location:'📍 Varlamore Blacksmith',
-    items:[slot('Coins'), slot('Air rune'), slot('Rune pickaxe'), slot('Big fishing net'), slot('Jug of wine','×5'), N('Adamant platebody'), N('Adamant platelegs'), N('Bronze platebody'), N('Bronze platelegs'), N('Mithril spear'), N('Steel platebody'), N('Iron dagger')] },
+  { id:157, coins:384601, label:'Bought armour + weapons from Varlamore blacksmith', location:'📍 Varlamore Blacksmith',
+    items:[slot('Coins','~385k gp'), slot('Air rune'), slot('Rune pickaxe'), slot('Big fishing net'), slot('Jug of wine','×5'), N('Adamant platebody'), N('Adamant platelegs'), N('Bronze platebody'), N('Bronze platelegs'), N('Mithril spear'), N('Steel platebody'), N('Iron dagger')],
+    note:'Spent ~7,000 gp on armour & weapons from blacksmith.' },
 
-  { id:158, label:'Equipped combat gear', location:'📍 Varlamore',
-    items:[slot('Coins'), slot('Air rune'), slot('Rune pickaxe'), slot('Big fishing net'), slot('Jug of wine','×5'), slot('Adamant platebody'), slot('Adamant platelegs'), slot('Bronze platebody'), slot('Bronze platelegs'), E('Mithril spear'), slot('Steel platebody'), E('Iron dagger')],
+  { id:158, coins:384601, label:'Equipped combat gear', location:'📍 Varlamore',
+    items:[slot('Coins','~385k gp'), slot('Air rune'), slot('Rune pickaxe'), slot('Big fishing net'), slot('Jug of wine','×5'), slot('Adamant platebody'), slot('Adamant platelegs'), slot('Bronze platebody'), slot('Bronze platelegs'), E('Mithril spear'), slot('Steel platebody'), E('Iron dagger')],
     note:'Equip: steel platebody, full bronze, iron dagger, mithril spear.' },
 
-  { id:160, label:'Deposited ALL — withdrew farming run supplies', location:'📍 Varlamore Bank',
+  { id:160, coins:384601, label:'Deposited ALL — withdrew farming run supplies', location:'📍 Varlamore Bank',
     items:[N('Pineapple','×15'), N('Bucket'), N('Chaos rune'), N('Big fishing net'), N('Jug of wine','×3'), E('Mithril spear')],
-    note:'Addy/bronze armour and iron dagger deposited. Keep mithril spear equipped.' },
+    note:'~385k gp in bank. Addy/bronze armour and iron dagger deposited. Keep mithril spear equipped.' },
 
-  { id:181, label:'Bought tiara / ring / amulet moulds', location:'📍 Civitas Crafting Shop',
-    items:[slot('Coins'), N('Tiara mould'), N('Ring mould'), N('Amulet mould'), slot('Rune pickaxe')] },
+  { id:181, coins:384451, label:'Bought tiara / ring / amulet moulds', location:'📍 Civitas Crafting Shop',
+    items:[slot('Coins','~384k gp'), N('Tiara mould'), N('Ring mould'), N('Amulet mould'), slot('Rune pickaxe')],
+    note:'Spent ~150 gp on three moulds.' },
 
-  { id:185, label:'Made bronze bar + 15 iron bars at furnace', location:'📍 Civitas Furnace',
-    items:[slot('Coins'), slot('Tiara mould'), slot('Ring mould'), slot('Amulet mould'), N('Bronze bar','×1'), N('Iron bar','×15')],
+  { id:185, coins:384451, label:'Made bronze bar + 15 iron bars at furnace', location:'📍 Civitas Furnace',
+    items:[slot('Coins','~384k gp'), slot('Tiara mould'), slot('Ring mould'), slot('Amulet mould'), N('Bronze bar','×1'), N('Iron bar','×15')],
     note:'Bronze bar from 1 copper + 1 tin ore. Iron bars from iron ore.' },
 
-  { id:187, label:'Smithed 150 iron arrowtips + assembled 150 iron arrows', location:'📍 Civitas Anvil → Furnace',
-    items:[slot('Coins'), slot('Tiara mould'), slot('Ring mould'), slot('Amulet mould'), N('Iron arrow','×150')],
+  { id:187, coins:384451, label:'Smithed 150 iron arrowtips + assembled 150 iron arrows', location:'📍 Civitas Anvil → Furnace',
+    items:[slot('Coins','~384k gp'), slot('Tiara mould'), slot('Ring mould'), slot('Amulet mould'), N('Iron arrow','×150')],
     note:'Iron bars → iron arrowtips at anvil. Arrowtips + feathers → iron arrows.' },
 
-  { id:188, label:'Smelted 20 silver bars → made 20 silver tiaras', location:'📍 Civitas Furnace',
-    items:[slot('Coins'), slot('Tiara mould'), slot('Ring mould'), slot('Amulet mould'), slot('Iron arrow','×150'), N('Silver tiara','×20')],
+  { id:188, coins:384451, label:'Smelted 20 silver bars → made 20 silver tiaras', location:'📍 Civitas Furnace',
+    items:[slot('Coins','~384k gp'), slot('Tiara mould'), slot('Ring mould'), slot('Amulet mould'), slot('Iron arrow','×150'), N('Silver tiara','×20')],
     note:'20 silver ore → 20 silver bars → 20 silver tiaras (tiara mould at furnace).' },
 
-  { id:189, label:'Deposited ALL — withdrew thieving supplies', location:'📍 Civitas Bank',
-    items:[N('Coins'), E('Dramen staff'), N('Jug of wine','×stack')] },
+  { id:189, coins:384451, label:'Deposited ALL — withdrew thieving supplies', location:'📍 Civitas Bank',
+    items:[N('Coins','~384k gp'), E('Dramen staff'), N('Jug of wine','×stack')] },
 
-  { id:192, label:'Bought slayer staff + anti-dragon shield', location:'📍 Zanaris',
-    items:[slot('Coins'), E('Dramen staff'), slot('Jug of wine','×stack'), N("Slayer's staff"), E('Anti-dragon shield')] },
+  { id:192, coins:383451, label:'Bought slayer staff + anti-dragon shield', location:'📍 Zanaris',
+    items:[slot('Coins','~383k gp'), E('Dramen staff'), slot('Jug of wine','×stack'), N("Slayer's staff"), E('Anti-dragon shield')],
+    note:'Spent ~1,000 gp on slayer staff + anti-dragon shield.' },
 
-  { id:200, label:'Withdrew jewellery crafting supplies', location:'📍 Varlamore Bank',
-    items:[N('Amulet mould'), N('Ring mould'), N('Sapphire'), N('Emerald')] },
+  { id:200, coins:383451, label:'Withdrew jewellery crafting supplies', location:'📍 Varlamore Bank',
+    items:[N('Amulet mould'), N('Ring mould'), N('Sapphire'), N('Emerald')],
+    note:'~383k gp in bank.' },
 
-  { id:201, label:'Made sapphire amulet (u) + emerald ring (u)', location:'📍 Varlamore Furnace',
+  { id:201, coins:383451, label:'Made sapphire amulet (u) + emerald ring (u)', location:'📍 Varlamore Furnace',
     items:[N('Sapphire amulet (u)'), N('Emerald ring (u)')],
     note:'Cut sapphire + amulet mould → Sapphire amulet (u). Cut emerald + ring mould → Emerald ring (u).' },
 
-  { id:223, label:'Withdrew fly fishing rod + feathers', location:'📍 Shilo Village Bank',
+  { id:223, coins:383451, label:'Withdrew fly fishing rod + feathers', location:'📍 Shilo Village Bank',
     items:[N('Fly fishing rod'), N('Feather','×1k')] },
 
-  { id:224, label:'Fished 75 trout + 1+ salmon', location:'📍 Shilo Village River',
+  { id:224, coins:383451, label:'Fished 75 trout + 1+ salmon', location:'📍 Shilo Village River',
     items:[slot('Fly fishing rod'), slot('Feather','×remaining'), N('Raw trout','×75'), N('Raw salmon','×1+')] },
 
-  { id:225, label:'Withdrew Brimhaven prep supplies', location:'📍 Shilo Village Bank',
-    items:[N('Trout','×stack'), N('Adamant axe'), N('Small fishing net'), N('Coins'), N("Slayer's staff")] },
+  { id:225, coins:383451, label:'Withdrew Brimhaven prep supplies', location:'📍 Shilo Village Bank',
+    items:[N('Trout','×stack'), N('Adamant axe'), N('Small fishing net'), N('Coins','~383k gp'), N("Slayer's staff")] },
 ];
 
 const INV_MAP = {};
@@ -811,7 +844,8 @@ function buildInvCard(taskId) {
     return `<div class="${cls}" title="${item.name}${item.eq?' (equipped)':''}">${itemImg(item.name)}<span class="chip-name">${item.name}</span>${qty}</div>`;
   }).join('');
   const note = snap.note ? `<div class="inv-card-note">ℹ️ ${snap.note}</div>` : '';
-  return `<div class="inv-card"><div class="inv-card-header">🎒 ${snap.label}</div><div class="inv-chips">${chips}</div>${note}</div>`;
+  const gpTag = (snap.coins != null) ? `<span class="inv-card-gp">🪙 ${fmtGP(snap.coins)}</span>` : '';
+  return `<div class="inv-card"><div class="inv-card-header" style="display:flex;align-items:center;gap:6px;">🎒 ${snap.label}${gpTag}</div><div class="inv-chips">${chips}</div>${note}</div>`;
 }
 
 function buildTaskHTML(task, checked) {
@@ -850,6 +884,13 @@ function updateSidebarInv(state) {
   for (let i=INV_IDS.length-1;i>=0;i--) { if(state[INV_IDS[i]]){snap=INV_MAP[INV_IDS[i]];break;} }
   document.getElementById('sidebar-label').textContent = snap ? snap.label : 'Starting out...';
   document.getElementById('sidebar-location').textContent = snap ? snap.location : '📍 —';
+  const coinBar = document.getElementById('coin-bar');
+  if (snap && snap.coins != null) {
+    document.getElementById('coin-amount').textContent = fmtGP(snap.coins);
+    coinBar.style.display = 'flex';
+  } else {
+    coinBar.style.display = 'none';
+  }
   const grid = document.getElementById('sidebar-inv');
   if (!snap || snap.items.length===0) {
     grid.innerHTML = Array(28).fill('<div class="inv-slot" style="opacity:.08"><span style="font-size:20px;color:var(--border)">⬜</span></div>').join('');
