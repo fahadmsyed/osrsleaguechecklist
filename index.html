@@ -105,6 +105,9 @@
   .chip-name{font-size:9.5px;color:var(--text);line-height:1.1;white-space:nowrap;}
   .chip-qty{font-size:8.5px;color:var(--gold);font-weight:bold;white-space:nowrap;margin-left:1px;}
   .inv-card-note{padding:3px 8px 5px;font-size:10px;color:var(--text-dim);font-style:italic;border-top:1px solid rgba(90,64,16,.4);}
+  .chip-slots{font-size:7.5px;color:#e08060;font-weight:bold;background:rgba(140,80,40,.25);border-radius:2px;padding:0 2px;margin-left:1px;white-space:nowrap;}
+  .slot-usage{padding:3px 10px 5px;font-size:10px;color:var(--text-dim);border-top:1px solid var(--border);display:flex;justify-content:space-between;}
+  .slot-usage .su-over{color:var(--red);font-weight:bold;}
   .inv-card-gp{margin-left:auto;color:var(--gold);font-size:10px;font-weight:700;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);border-radius:3px;padding:1px 5px;white-space:nowrap;}
   .coin-bar{display:none;align-items:center;gap:6px;padding:5px 10px 6px;border-bottom:1px solid var(--border);background:rgba(200,168,75,.06);}
   .coin-bar img{width:20px;height:20px;image-rendering:pixelated;}
@@ -129,6 +132,7 @@
     <div class="inv-sublabel" id="sidebar-label">Starting out...</div>
     <div class="coin-bar" id="coin-bar"><img src="https://oldschool.runescape.wiki/images/Coins_10000.png"><span class="cb-amount" id="coin-amount">—</span><span class="cb-label">total gp</span></div>
     <div class="inv-grid" id="sidebar-inv"></div>
+    <div class="slot-usage" id="slot-usage"><span>Slots used</span><span id="slot-count">—</span></div>
     <div class="inv-location" id="sidebar-location">📍 —</div>
   </div>
   <div class="nav-panel">
@@ -303,6 +307,38 @@ function fmtGP(n) {
   if (n >= 10000)   return Math.round(n/1000)+'k gp';
   if (n >= 1000)    return (n/1000).toFixed(1).replace('.0','')+'k gp';
   return n+' gp';
+}
+
+// Items that stack to 1 inventory slot regardless of quantity
+const STACKABLE = new Set([
+  'Coins',
+  'Air rune','Mind rune','Fire rune','Water rune','Earth rune',
+  'Chaos rune','Nature rune','Cosmic rune','Death rune','Law rune',
+  'Arrow shaft','Headless arrow',
+  'Iron arrow','Bronze arrow','Steel arrow','Mithril arrow','Adamant arrow','Rune arrow',
+  'Feather','Fishing bait',
+  // Most farming seeds stack
+  'Potato seed','Onion seed','Cabbage seed','Tomato seed','Sweetcorn seed','Strawberry seed','Watermelon seed',
+  'Barley seed','Hammerstone seed','Asgarnian seed','Jute seed','Wildblood seed',
+  'Guam seed','Marrentill seed','Tarromin seed','Harralander seed','Ranarr seed','Toadflax seed',
+  'Irit seed','Avantoe seed','Kwuarm seed','Snapdragon seed','Cadantine seed','Lantadyme seed','Dwarf weed seed','Torstol seed',
+  'Acorn','Willow seed','Maple seed','Yew seed','Magic seed','Dragonfruit tree seed',
+  'Cactus seed','Belladonna seed','Mushroom spore','Poison ivy seed',
+  'Herb seed',
+]);
+
+function parseQtyNum(qtyStr) {
+  if (!qtyStr) return 1;
+  let s = String(qtyStr).trim().replace(/^[×~]/,'').replace(/[+±→].*$/,'').trim();
+  if (/gp$/i.test(s)||/^(fill|remaining|some|stack|growing|stacked|pk)/.test(s)) return 1;
+  if (/^(\d+(\.\d+)?)k$/i.test(s)) return Math.round(parseFloat(s)*1000);
+  const n = parseInt(s);
+  return isNaN(n) ? 1 : n;
+}
+
+function invSlotCount(item) {
+  if (item.gone || STACKABLE.has(item.name)) return 1;
+  return Math.max(1, parseQtyNum(item.qty));
 }
 
 // ── INVENTORY SNAPSHOTS ───────────────────────────────────────────────────
@@ -841,7 +877,9 @@ function buildInvCard(taskId) {
     if (item.newItem) cls += ' new-item';
     if (item.gone) cls += ' gone';
     const qty = item.qty ? `<span class="chip-qty">${item.qty}</span>` : '';
-    return `<div class="${cls}" title="${item.name}${item.eq?' (equipped)':''}">${itemImg(item.name)}<span class="chip-name">${item.name}</span>${qty}</div>`;
+    const slots = invSlotCount(item);
+    const slotBadge = (!item.gone && slots > 1) ? `<span class="chip-slots">${slots}sl</span>` : '';
+    return `<div class="${cls}" title="${item.name}${item.eq?' (equipped)':''} — ${slots} slot${slots>1?'s':''}">${itemImg(item.name)}<span class="chip-name">${item.name}</span>${qty}${slotBadge}</div>`;
   }).join('');
   const note = snap.note ? `<div class="inv-card-note">ℹ️ ${snap.note}</div>` : '';
   const gpTag = (snap.coins != null) ? `<span class="inv-card-gp">🪙 ${fmtGP(snap.coins)}</span>` : '';
@@ -892,19 +930,42 @@ function updateSidebarInv(state) {
     coinBar.style.display = 'none';
   }
   const grid = document.getElementById('sidebar-inv');
+  const slotCountEl = document.getElementById('slot-count');
+  const EMPTY_SLOT = '<div class="inv-slot" style="opacity:.08"><span style="font-size:20px;color:var(--border)">⬜</span></div>';
   if (!snap || snap.items.length===0) {
-    grid.innerHTML = Array(28).fill('<div class="inv-slot" style="opacity:.08"><span style="font-size:20px;color:var(--border)">⬜</span></div>').join('');
+    grid.innerHTML = Array(28).fill(EMPTY_SLOT).join('');
+    if(slotCountEl) slotCountEl.innerHTML='0 / 28';
     return;
   }
-  const slots = snap.items.map(item => {
-    let cls='inv-slot';
-    if(item.eq) cls+=' eq';
-    if(item.newItem) cls+=' new-item';
-    const qty=item.qty?`<span class="s-qty">${item.qty}</span>`:'';
-    return `<div class="${cls}" title="${item.name}${item.eq?' (equipped)':''}">${qty}${itemImg(item.name)}<span class="s-name">${item.name}</span></div>`;
+  // Expand non-stackable items to their actual slot count
+  const expanded = [];
+  snap.items.forEach(item => {
+    if (item.gone) return;
+    const count = invSlotCount(item);
+    let cls = 'inv-slot';
+    if (item.eq) cls += ' eq';
+    if (item.newItem) cls += ' new-item';
+    for (let i = 0; i < count; i++) {
+      const qtyLabel = (STACKABLE.has(item.name) && item.qty) ? `<span class="s-qty">${item.qty}</span>` : '';
+      const nameLabel = (i === 0) ? `<span class="s-name">${item.name}</span>` : `<span class="s-name" style="opacity:.4">${item.name}</span>`;
+      expanded.push(`<div class="${cls}" title="${item.name}${item.eq?' (equipped)':''}${count>1?' ('+count+' slots)':''}">${qtyLabel}${itemImg(item.name)}${nameLabel}</div>`);
+    }
   });
-  while(slots.length<28) slots.push('<div class="inv-slot" style="opacity:.08"><span style="font-size:20px;color:var(--border)">⬜</span></div>');
-  grid.innerHTML = slots.slice(0,28).join('');
+  const used = expanded.length;
+  if (slotCountEl) {
+    const over = used > 28;
+    slotCountEl.innerHTML = over
+      ? `<span class="su-over">${used} / 28 ⚠ overflow</span>`
+      : `${used} / 28`;
+  }
+  let display = [...expanded];
+  if (used > 28) {
+    display = expanded.slice(0, 27);
+    display.push(`<div class="inv-slot" style="border-color:var(--red);background:rgba(140,63,63,.15);justify-content:center"><span style="color:var(--red);font-size:9px;text-align:center;line-height:1.3">+${used-27}<br>more</span></div>`);
+  } else {
+    while (display.length < 28) display.push(EMPTY_SLOT);
+  }
+  grid.innerHTML = display.join('');
 }
 
 // ── PROGRESS ──────────────────────────────────────────────────────────────
